@@ -391,18 +391,19 @@ body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{
   table tr,table thead,table tr td,table tr th{break-inside:avoid;page-break-inside:avoid}
   thead{display:table-header-group}
   tfoot{display:table-footer-group}
-  .sec-h,.sx-bh,h2,h3,h4{break-after:avoid-page;page-break-after:avoid}
-  /* prevent a heading/intro stranded alone before its content */
-  .sec{break-inside:auto;margin-bottom:16px}
+  /* keep a heading with its intro text, but do NOT let it drag large unbreakable blocks to the next page */
+  .sec-h{break-after:avoid;page-break-after:avoid}
+  h3,h4,.sx-bh{break-after:avoid;page-break-after:avoid}
+  .sec{break-inside:auto;page-break-inside:auto;margin-bottom:16px}
   .sx-band,.sx-quad{break-inside:avoid;page-break-inside:avoid}
-  .sx-prog{margin-bottom:14px}
-  p{orphans:3;widows:3}
+  .sx-prog{margin-bottom:14px;break-before:auto;page-break-before:auto}
+  p{orphans:2;widows:2}
   /* manual page breaks set by the user */
   .pb-before{break-before:page!important;page-break-before:always!important}
   .pb-ctrl{display:none!important}
-  /* push the closing block (We look forward + contact) to the bottom of the last page */
-  .last-sec{display:flex;flex-direction:column;min-height:calc(297mm - 40mm)}
-  .last-sec .closing-block{margin-top:auto}
+  /* closing block (We look forward + contact) flows right after Next Steps */
+  .last-sec{display:block}
+  .closing-block{break-inside:avoid;page-break-inside:avoid;margin-top:20px}
   .owner-card{break-inside:avoid;page-break-inside:avoid}
 }
 @page{margin:12mm 10mm}
@@ -438,6 +439,8 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
 #guideBtn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 .pb-hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:55;background:var(--ink);color:#fff;font-size:12.5px;line-height:1.5;padding:12px 18px;border-radius:12px;max-width:560px;width:calc(100% - 40px);box-shadow:0 12px 40px rgba(0,0,0,.3);border-left:3px solid var(--orange)}
 .pb-hint b{color:var(--amber)}
+.pb-clear{margin-left:10px;background:var(--orange);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-family:'Nunito Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer}
+.pb-clear:hover{background:#fff;color:var(--orange)}
 
 /* density / spacing control */
 .density-ctrl{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-dk);border-radius:8px;padding:3px 4px 3px 10px;background:#fff}
@@ -1029,8 +1032,10 @@ $('#breakBtn').onclick=()=>{
   let hint=document.getElementById('pbHint');
   if(pbEdit){
     if(!hint){hint=document.createElement('div');hint.id='pbHint';hint.className='pb-hint no-print';document.body.appendChild(hint);}
-    hint.innerHTML='✂ Page-break mode on. Click the dashed buttons before any section or syllabus block to force it onto a new page. Use <b>PDF / Print</b> and check the print preview to confirm — that preview is the exact result.';
+    hint.innerHTML='✂ Page-break mode on. Click a dashed button to force that block onto a new page; click a solid orange one to remove its break. <button id="clearBreaks" class="pb-clear">Clear all breaks</button>';
     hint.style.display='block';
+    const cb=document.getElementById('clearBreaks');
+    if(cb)cb.onclick=()=>{document.querySelectorAll('#docMount .pb-before').forEach(e=>e.classList.remove('pb-before'));decoratePB();};
     const first=document.querySelector('#docMount .pb-ctrl');if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
   } else if(hint){ hint.style.display='none'; }
 };
