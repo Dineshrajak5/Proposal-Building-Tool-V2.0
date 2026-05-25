@@ -25,7 +25,11 @@ input,select,button{font-family:inherit}
 /* topbar */
 .topbar{position:sticky;top:0;z-index:60;background:var(--ink);color:var(--paper);border-bottom:3px solid var(--orange)}
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
-.brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.02em;font-size:17px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:17px}
+.brand .brand-logo{display:inline-flex;align-items:center;background:#fff;border-radius:6px;padding:5px 9px}
+.brand .brand-logo .fp-logo-svg{height:22px;width:auto}
+.brand .brand-sub{font-size:12.5px;font-weight:600;color:#cfc9bd;letter-spacing:0}
+@media(max-width:560px){.brand .brand-sub{display:none}}
 .brand .mk{display:inline-grid;grid-template-columns:repeat(2,1fr);gap:2px}
 .brand .mk i{width:7px;height:7px;background:var(--orange);display:block;border-radius:1px}
 .brand .mk i:nth-child(2),.brand .mk i:nth-child(3){background:var(--paper)}
@@ -111,6 +115,8 @@ label.fld .lab,.lab{display:block;font-size:11.5px;font-weight:700;letter-spacin
 .prog-row .actual{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);white-space:nowrap}
 .prog-row input.dur{width:66px;text-align:center;border:1px solid var(--line-dk);border-radius:7px;padding:6px;font-size:13px;background:#fff}
 .prog-row input.dur:focus{outline:none;border-color:var(--orange)}
+.prog-row select.vsel{border:1px solid var(--line-dk);border-radius:7px;padding:6px 4px;font-size:12px;background:#fff;cursor:pointer;max-width:96px}
+.prog-row select.vsel:focus{outline:none;border-color:var(--orange)}
 .prog-row .rm-prog{background:none;border:none;color:var(--muted);cursor:pointer;font-size:17px}
 .prog-row .rm-prog:hover{color:var(--orange)}
 @media(max-width:680px){.prog-row{grid-template-columns:1fr 1fr;gap:7px}.prog-row .pmain{grid-column:1/-1}}
@@ -220,6 +226,13 @@ ul.incl li::before{content:"";position:absolute;left:0;top:7px;width:11px;height
 .signoff .box .n{font-family:'Nunito Sans',sans-serif;font-size:18px;margin-top:4px}
 .signoff .box .d{font-size:13px;color:var(--muted);margin-top:3px}
 .docfoot{text-align:center;color:var(--muted);font-size:12px;padding:24px;border-top:1px solid var(--line)}
+/* closing block + owner contact card */
+.closing-block{margin-top:22px}
+.owner-card{margin-top:18px;border:1px solid var(--line);border-top:3px solid var(--orange);border-radius:12px;padding:18px 20px;background:var(--paper)}
+.owner-card .oc-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--orange-dk);font-weight:700}
+.owner-card .oc-name{font-size:20px;font-weight:800;margin-top:6px;color:var(--ink)}
+.owner-card .oc-desg{font-size:13.5px;color:var(--muted);margin-top:2px}
+.owner-card .oc-contact{font-size:13.5px;color:#2c2a25;margin-top:8px;font-weight:600}
 .empty-hint{padding:18px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--line-dk);border-radius:10px}
 
 /* proposal type selector */
@@ -333,6 +346,7 @@ body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{
 
 /* group rows in tables */
 .tbl tr.grp td{background:var(--ink)!important;color:#fff;font-weight:700;font-size:12px;letter-spacing:.03em;text-transform:uppercase}
+.tbl tr.subtot td{background:#faf5ee!important;font-weight:700;color:#6b4a1a;font-size:12.5px}
 .tbl tfoot .totr td,.tbl tbody .totr td{font-weight:800;background:#fef0eb!important;border-top:2px solid var(--orange)}
 .tbl .totr.grand td{background:var(--ink)!important;color:#fff;border-top:none}
 
@@ -364,7 +378,7 @@ body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{
   .doc-stage{background:#fff!important;padding:0!important;margin:0!important}
   .page{box-shadow:none!important;margin:0!important;max-width:100%!important;width:100%!important;border-radius:0!important}
   /* full-bleed cover that fills the first printed page */
-  .sx-cover{min-height:248mm;box-sizing:border-box;break-after:page;page-break-after:always;display:flex;flex-direction:column;justify-content:flex-start}
+  .sx-cover{min-height:auto;padding:30mm 16mm 26mm;box-sizing:border-box;break-after:page;page-break-after:always}
   .sx-cover::after{display:none}
   .docbody,.sx-body{padding:0 4mm!important}
   /* keep small atomic blocks together; allow large sections to flow */
@@ -378,9 +392,78 @@ body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{
   .sx-band,.sx-quad{break-inside:avoid;page-break-inside:avoid}
   .sx-prog{margin-bottom:14px}
   p{orphans:3;widows:3}
+  /* manual page breaks set by the user */
+  .pb-before{break-before:page!important;page-break-before:always!important}
+  .pb-ctrl{display:none!important}
+  /* push the closing block (We look forward + contact) to the bottom of the last page */
+  .last-sec{display:flex;flex-direction:column;min-height:calc(297mm - 40mm)}
+  .last-sec .closing-block{margin-top:auto}
+  .owner-card{break-inside:avoid;page-break-inside:avoid}
 }
 @page{margin:12mm 10mm}
 @page:first{margin:0}
+
+/* ---------- page-break editor (screen only) ---------- */
+.pb-ctrl{margin:0 0 0;padding:6px 0;display:flex;justify-content:center}
+.pb-toggle{font-family:'Nunito Sans',sans-serif;font-size:12px;font-weight:700;border:1.5px dashed var(--line-dk);background:#fff;color:var(--muted);border-radius:30px;padding:6px 16px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+.pb-toggle:hover{border-color:var(--orange);color:var(--orange)}
+.pb-toggle.on{background:var(--orange);border-style:solid;border-color:var(--orange);color:#fff}
+.pb-toggle .pb-ico{font-size:13px}
+/* visible divider on screen when a manual break is set */
+body.pb-edit .pb-before,.pb-before.show-line{position:relative}
+.pb-before::before{content:"";display:none}
+body.pb-edit .pb-before::before{content:"⎯⎯⎯  PAGE BREAK — starts on a new page  ⎯⎯⎯";display:block;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--orange);background:repeating-linear-gradient(90deg,transparent,transparent 6px,#fce8e2 6px,#fce8e2 12px);border-top:2px dashed var(--orange);padding:7px 0 5px;margin:14px 0 10px}
+/* highlight editable blocks while editing */
+body.pb-edit #docMount .sec,body.pb-edit #docMount .sx-prog{outline:1px dashed transparent;transition:outline .15s}
+body.pb-edit #docMount .sec:hover,body.pb-edit #docMount .sx-prog:hover{outline:1px dashed var(--line-dk);outline-offset:6px}
+
+/* inline text + layout editor */
+body.text-edit #docMount .page{cursor:text}
+body.text-edit #docMount [contenteditable="true"]{outline:none}
+.blk-hl{position:relative}
+body.text-edit .blk-hl{outline:1px dashed transparent;transition:outline .12s,background .12s;border-radius:4px}
+body.text-edit .blk-hl:hover{outline:1px dashed var(--orange);outline-offset:5px;background:rgba(239,75,43,.02)}
+.blk-tools{position:absolute;top:-13px;right:8px;display:none;gap:3px;background:var(--ink);border-radius:7px;padding:3px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
+body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
+.blk-tools button{font-family:'Nunito Sans',sans-serif;font-size:10.5px;font-weight:700;border:none;background:#33333a;color:#fff;border-radius:5px;padding:4px 7px;cursor:pointer;line-height:1}
+.blk-tools button:hover{background:var(--orange)}
+.blk-tools .bt-del{background:#5a2320}
+.blk-tools .bt-del:hover{background:#b3261e}
+@media print{.blk-tools{display:none!important}.blk-hl{outline:none!important;background:none!important}}
+#guideBtn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pb-hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:55;background:var(--ink);color:#fff;font-size:12.5px;line-height:1.5;padding:12px 18px;border-radius:12px;max-width:560px;width:calc(100% - 40px);box-shadow:0 12px 40px rgba(0,0,0,.3);border-left:3px solid var(--orange)}
+.pb-hint b{color:var(--amber)}
+
+/* density / spacing control */
+.density-ctrl{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-dk);border-radius:8px;padding:3px 4px 3px 10px;background:#fff}
+.density-ctrl .dlab{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.density-ctrl .dsel{border:none;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;padding:4px 2px}
+.density-ctrl .dsel:focus{outline:none}
+
+/* spacing scales — applied to #docMount.density-* (screen + print) */
+#docMount.density-compact .sec{margin-bottom:26px}
+#docMount.density-compact .sx-body{padding-top:32px;padding-bottom:36px}
+#docMount.density-compact .sec p{margin-bottom:8px;line-height:1.45}
+#docMount.density-compact .sec-h{margin-bottom:12px;padding-bottom:6px}
+#docMount.density-compact table.tbl td,#docMount.density-compact table.tbl th,#docMount.density-compact .daytbl td,#docMount.density-compact .sx-syl td{padding-top:7px;padding-bottom:7px}
+#docMount.density-compact .sx-band .bc,#docMount.density-compact .sx-quad .qc,#docMount.density-compact .gcard{padding:11px}
+#docMount.density-compact .sx-prog{margin-bottom:16px}
+#docMount.density-compact .sx-cover{padding-top:44px;padding-bottom:34px}
+
+#docMount.density-tight .sec{margin-bottom:16px}
+#docMount.density-tight .sx-body{padding-top:24px;padding-bottom:28px}
+#docMount.density-tight .sec p{margin-bottom:6px;line-height:1.38}
+#docMount.density-tight .sec-h{margin-bottom:9px;padding-bottom:5px}
+#docMount.density-tight .sec-h h2{font-size:21px}
+#docMount.density-tight table.tbl td,#docMount.density-tight table.tbl th,#docMount.density-tight .daytbl td,#docMount.density-tight .sx-syl td{padding-top:5px;padding-bottom:5px;font-size:12px}
+#docMount.density-tight .sx-band{margin:10px 0}
+#docMount.density-tight .sx-band .bc,#docMount.density-tight .sx-quad .qc,#docMount.density-tight .gcard{padding:9px}
+#docMount.density-tight .sx-band .bl,#docMount.density-tight .sx-quad .qc p{font-size:11px;line-height:1.35}
+#docMount.density-tight .sx-prog{margin-bottom:12px}
+#docMount.density-tight .sx-lo{font-size:11.5px;margin:2px 0}
+#docMount.density-tight .sx-cover{padding-top:36px;padding-bottom:28px}
+#docMount.density-comfortable .sec{margin-bottom:52px}
+#docMount.density-comfortable .sec p{line-height:1.7}
 
 /* save / recall */
 .save-row{display:flex;gap:8px;margin-top:10px}
@@ -423,7 +506,7 @@ body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{
 <!-- TOP BAR -->
 <div class="topbar no-print">
   <div class="wrap">
-    <div class="brand"><span class="mk"><i></i><i></i><i></i><i></i></span> FACE<b>Prep</b> · Multi-Year Proposal Builder</div>
+    <div class="brand"><span class="brand-logo" id="brandLogo"></span><span class="brand-sub">· Proposal Builder V2.0</span></div>
     <div class="topbar-right">
       <div class="steps">
         <span id="st1" class="on">1 · Configure</span><span class="sep">—</span><span id="st2">2 · Proposal</span>
@@ -559,8 +642,24 @@ body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{
 <!-- DOCUMENT -->
 <div class="doc-stage" id="docStage">
   <div class="docbar no-print"><div class="wrap">
-    <div class="lft">📄 Proposal preview — review, then print or save as PDF</div>
-    <div class="rgt"><button class="btn btn-ghost btn-sm" id="backBtn">← Edit</button><button class="btn btn-ghost btn-sm" id="docxBtn">⬇ Word (.doc)</button><button class="btn btn-primary btn-sm" id="printBtn">⬇ PDF / Print</button></div>
+    <div class="lft">📄 Proposal preview — edit text, fix spacing & breaks, then download</div>
+    <div class="rgt">
+      <button class="btn btn-ghost btn-sm" id="backBtn">← Edit form</button>
+      <button class="btn btn-ghost btn-sm" id="editBtn" title="Click text in the proposal to edit it directly">✏️ Edit text: <b id="editState">Off</b></button>
+      <div class="density-ctrl" title="Reduce spacing to fit more on each page">
+        <span class="dlab">Spacing</span>
+        <select class="dsel" id="densitySel">
+          <option value="comfortable">Comfortable</option>
+          <option value="normal" selected>Normal</option>
+          <option value="compact">Compact</option>
+          <option value="tight">Tight</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="breakBtn" title="Insert/remove page breaks before each section">✂ Breaks: <b id="breakState">Off</b></button>
+      <button class="btn btn-ghost btn-sm" id="resetBtn" title="Re-generate from the form, discarding manual edits">↻ Reset</button>
+      <button class="btn btn-ghost btn-sm" id="docxBtn">⬇ Word</button>
+      <button class="btn btn-primary btn-sm" id="printBtn">⬇ PDF / Print</button>
+    </div>
   </div></div>
   <div id="docMount"></div>
 </div>
@@ -588,6 +687,7 @@ function showApp(){document.body.classList.add('authed');$('#loginGate').style.d
 (function(){
   const gate=$('#loginGate');
   $('#loginLogo').innerHTML=logoSVG();
+  $('#brandLogo').innerHTML=logoSVG();
   const tryLogin=()=>{
     const email=($('#loginEmail').value||'').trim().toLowerCase();
     const pass=($('#loginPass').value||'').trim();
@@ -668,13 +768,21 @@ function paySum(){const t=payments.reduce((a,m)=>a+(+m.pct||0),0);const el=$('#p
 $('#addPay').onclick=()=>{payments.push({id:uid(),pct:0,when:''});renderPay();};
 renderPay();
 
+function progHours(v){return v.hours||v.syllabus.reduce((a,r)=>a+(parseFloat(r.duration)||0),0);}
 function newProgram(prod){
-  const v=prod.variants[Math.min(1,prod.variants.length-1)];
-  const actual=v.hours||v.syllabus.reduce((a,r)=>a+(parseFloat(r.duration)||0),0);
+  const vi=0; // default to first (usually lowest) variant
+  const v=prod.variants[vi];
+  const actual=progHours(v);
   return {id:uid(), name:prod.name, title:prod.name, cat:prod.category,
-          desc:prod.desc||'', impact:prod.impact||'',
-          actualHours:actual, proposedHours:actual,
+          desc:prod.desc||'', impact:prod.impact||'', objective:prod.objective||'', outcome:prod.outcome||'',
+          variants:prod.variants, vi, actualHours:actual, proposedHours:actual,
           syllabus:v.syllabus.map(r=>({topic:r.topic,sub:r.sub,duration:parseFloat(r.duration)||0}))};
+}
+function applyVariant(p,vi){
+  p.vi=vi; const v=p.variants[vi];
+  p.actualHours=progHours(v);
+  p.proposedHours=p.actualHours;
+  p.syllabus=v.syllabus.map(r=>({topic:r.topic,sub:r.sub,duration:parseFloat(r.duration)||0}));
 }
 function defaultRate(){return $('#pmode').value==='perhour'?33:7500;}
 function newSem(n){return {id:uid(), name:termSem()+' '+n, rate:defaultRate(), programs:[]};}
@@ -733,15 +841,23 @@ function semEl(b,s){
 function progEl(b,s,p){
   const el=document.createElement('div'); el.className='prog-row';
   const days=Math.round((+p.proposedHours||0)/PER_DAY);
+  const key=`${b.id}|${s.id}|${p.id}`;
+  let variantCtrl='';
+  if(p.variants && p.variants.length>1){
+    const opts=p.variants.map((v,i)=>`<option value="${i}" ${i===p.vi?'selected':''}>${progHours(v)}h variant</option>`).join('');
+    variantCtrl=`<div class="col"><span class="cl">Variant</span><select class="vsel" data-prog="${key}" data-f="variant">${opts}</select></div>`;
+  } else {
+    variantCtrl=`<div class="col"><span class="cl">Catalog</span><span class="actual">${p.actualHours} h</span></div>`;
+  }
   el.innerHTML=`
     <div class="pmain">
-      <input class="ptitle" value="${esc(p.title)}" data-prog="${b.id}|${s.id}|${p.id}" data-f="title">
+      <input class="ptitle" value="${esc(p.title)}" data-prog="${key}" data-f="title">
       <span class="pcat">${esc(p.cat)}</span>
     </div>
-    <div class="col"><span class="cl">Actual</span><span class="actual">${p.actualHours} h</span></div>
-    <div class="col"><span class="cl">Proposed (h)</span><input class="dur" type="number" min="0" step="0.5" value="${p.proposedHours}" data-prog="${b.id}|${s.id}|${p.id}" data-f="proposedHours"></div>
-    <div class="col"><span class="cl">Days</span><span class="actual">${days} d</span></div>
-    <button class="rm-prog" data-rmp="${b.id}|${s.id}|${p.id}" title="Remove">×</button>`;
+    ${variantCtrl}
+    <div class="col"><span class="cl">Proposed (h)</span><input class="dur" type="number" min="0" step="0.5" value="${p.proposedHours}" data-prog="${key}" data-f="proposedHours"></div>
+    <div class="col"><span class="cl">Days</span><span class="actual" data-days="${key}">${days} d</span></div>
+    <button class="rm-prog" data-rmp="${key}" title="Remove">×</button>`;
   return el;
 }
 
@@ -780,18 +896,31 @@ $('#batchHost').addEventListener('input',e=>{
     renderSummary();
   }
   if(t.dataset.prog){
-    const[bid,sid,pid]=t.dataset.prog.split('|'); const p=findP(bid,sid,pid);
+    const[bid,sid,pid]=t.dataset.prog.split('|'); const b=findB(bid),s=findS(bid,sid),p=findP(bid,sid,pid);
     if(t.dataset.f==='title') p.title=t.value;
+    if(t.dataset.f==='variant'){
+      applyVariant(p,+t.value);
+      render(); // re-render so proposed-hours field + days reflect the new variant
+      return;
+    }
     if(t.dataset.f==='proposedHours'){
       p.proposedHours=+t.value||0;
-      const semRow=t.closest('.sem'); const b=findB(bid),s=findS(bid,sid);
+      const semRow=t.closest('.sem');
       const shrs=s.programs.reduce((a,x)=>a+(+x.proposedHours||0),0);
       semRow.querySelector('.shrs').textContent=`${shrs} hrs · ${Math.round(shrs/PER_DAY)} d`;
       semRow.querySelector('.ssub').textContent=fmt(semSubtotal(b,s).incl);
-      const dCell=t.closest('.prog-row').querySelectorAll('.actual')[1];
+      const dCell=t.closest('.prog-row').querySelector('[data-days]');
       if(dCell) dCell.textContent=Math.round((+t.value||0)/PER_DAY)+' d';
       renderSummary();
     }
+  }
+});
+/* selects fire 'change' (also 'input' in modern browsers) — ensure variant switch works everywhere */
+$('#batchHost').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.prog && t.dataset.f==='variant'){
+    const[bid,sid,pid]=t.dataset.prog.split('|'); const p=findP(bid,sid,pid);
+    applyVariant(p,+t.value); render();
   }
 });
 
@@ -845,10 +974,119 @@ function renderSummary(){
 
 /* ---------- generate document ---------- */
 $('#genBtn').onclick=()=>{buildDoc();$('#builder').style.display='none';$('#docStage').classList.add('show');
-  $('#st1').classList.replace('on','done');$('#st1').textContent='1 · Configured ✓';$('#st2').classList.add('on');window.scrollTo(0,0);};
+  $('#st1').classList.replace('on','done');$('#st1').textContent='1 · Configured ✓';$('#st2').classList.add('on');
+  // fresh document — clear any prior edit/break modes
+  textEdit=false;pbEdit=false;document.body.classList.remove('text-edit','pb-edit');
+  $('#editState').textContent='Off';$('#breakState').textContent='Off';
+  const lvl=$('#densitySel').value;const mount=$('#docMount');
+  mount.classList.remove('density-comfortable','density-normal','density-compact','density-tight');mount.classList.add('density-'+lvl);
+  window.scrollTo(0,0);};
 $('#backBtn').onclick=()=>{$('#docStage').classList.remove('show');$('#builder').style.display='block';
   $('#st2').classList.remove('on');$('#st1').classList.replace('done','on');$('#st1').textContent='1 · Configure';window.scrollTo(0,0);};
-$('#printBtn').onclick=()=>window.print();
+$('#printBtn').onclick=()=>{
+  document.body.classList.remove('pb-edit');$('#breakState').textContent='Off';
+  // turn off live editing chrome (but keep the edited content) for a clean print
+  const page=document.querySelector('#docMount .page'); if(page)page.setAttribute('contenteditable','false');
+  document.querySelectorAll('#docMount .blk-tools').forEach(e=>e.remove());
+  document.querySelectorAll('#docMount .blk-hl').forEach(e=>e.classList.remove('blk-hl'));
+  document.body.classList.remove('text-edit');$('#editState').textContent='Off';textEdit=false;
+  const h=document.getElementById('edHint'); if(h)h.style.display='none';
+  window.print();
+};
+
+/* ---------- manual page-break editing ---------- */
+let pbEdit=false;
+function pbTargets(){
+  // sections, and each syllabus program block — the items most likely to need a break
+  return [...document.querySelectorAll('#docMount .sec, #docMount .sx-prog')];
+}
+function decoratePB(){
+  // remove old controls first
+  document.querySelectorAll('#docMount .pb-ctrl').forEach(e=>e.remove());
+  if(!pbEdit) return;
+  pbTargets().forEach((el,i)=>{
+    if(i===0 && el.classList.contains('sec')) {/* first section: still allow */ }
+    const bar=document.createElement('div');
+    bar.className='pb-ctrl no-print';
+    const on=el.classList.contains('pb-before');
+    bar.innerHTML=`<button class="pb-toggle ${on?'on':''}" title="Start this block on a new page">
+        <span class="pb-ico">${on?'✓':'✂'}</span> ${on?'Page break ON — starts on new page':'Insert page break before this'}
+      </button>`;
+    bar.querySelector('.pb-toggle').onclick=()=>{el.classList.toggle('pb-before');decoratePB();};
+    el.parentNode.insertBefore(bar, el);
+  });
+}
+$('#breakBtn').onclick=()=>{
+  pbEdit=!pbEdit;
+  document.body.classList.toggle('pb-edit',pbEdit);
+  $('#breakState').textContent=pbEdit?'On':'Off';
+  decoratePB();
+  let hint=document.getElementById('pbHint');
+  if(pbEdit){
+    if(!hint){hint=document.createElement('div');hint.id='pbHint';hint.className='pb-hint no-print';document.body.appendChild(hint);}
+    hint.innerHTML='✂ Page-break mode on. Click the dashed buttons before any section or syllabus block to force it onto a new page. Use <b>PDF / Print</b> and check the print preview to confirm — that preview is the exact result.';
+    hint.style.display='block';
+    const first=document.querySelector('#docMount .pb-ctrl');if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
+  } else if(hint){ hint.style.display='none'; }
+};
+$('#densitySel').onchange=e=>{
+  const lvl=e.target.value;
+  const mount=$('#docMount');
+  mount.classList.remove('density-comfortable','density-normal','density-compact','density-tight');
+  mount.classList.add('density-'+lvl);
+};
+
+/* ---------- inline text + layout editor ---------- */
+let textEdit=false;
+function blockTargets(){
+  return [...document.querySelectorAll('#docMount .sec, #docMount .sx-prog, #docMount .sx-band, #docMount .sx-quad, #docMount table.tbl, #docMount .owner-card, #docMount .glance')];
+}
+function decorateEdit(){
+  document.querySelectorAll('#docMount .blk-tools').forEach(e=>e.remove());
+  document.querySelectorAll('#docMount .blk-hl').forEach(e=>e.classList.remove('blk-hl'));
+  const page=document.querySelector('#docMount .page');
+  if(page) page.setAttribute('contenteditable', textEdit?'true':'false');
+  if(!textEdit) return;
+  blockTargets().forEach(el=>{
+    el.classList.add('blk-hl');
+    const tools=document.createElement('div');
+    tools.className='blk-tools no-print';
+    tools.setAttribute('contenteditable','false');
+    tools.innerHTML=`
+      <button data-act="up"   title="Reduce space above">▲ less</button>
+      <button data-act="down" title="Add space above">▼ more</button>
+      <button data-act="del"  title="Delete this block" class="bt-del">✕</button>`;
+    tools.querySelectorAll('button').forEach(btn=>btn.onmousedown=e=>{ // mousedown so it fires before blur
+      e.preventDefault();
+      const act=btn.dataset.act;
+      let mt=parseFloat(el.style.marginTop|| getComputedStyle(el).marginTop)||0;
+      if(act==='up'){mt=Math.max(-30,mt-8);el.style.marginTop=mt+'px';}
+      else if(act==='down'){mt=mt+8;el.style.marginTop=mt+'px';}
+      else if(act==='del'){ if(confirm('Delete this block from the proposal?')){el.remove();} }
+    });
+    el.appendChild(tools);
+  });
+}
+$('#editBtn').onclick=()=>{
+  textEdit=!textEdit;
+  document.body.classList.toggle('text-edit',textEdit);
+  $('#editState').textContent=textEdit?'On':'Off';
+  decorateEdit();
+  let h=document.getElementById('edHint');
+  if(textEdit){
+    if(!h){h=document.createElement('div');h.id='edHint';h.className='pb-hint no-print';document.body.appendChild(h);}
+    h.innerHTML='✏️ Edit mode on. <b>Click any text to edit it.</b> Hover a block to get spacing controls: <b>▲ less / ▼ more</b> space above, or <b>✕</b> to delete it. Your edits are kept for PDF & Word. Use <b>↻ Reset</b> to start over from the form.';
+    h.style.display='block';
+  } else if(h){h.style.display='none';}
+};
+$('#resetBtn').onclick=()=>{
+  if(!confirm('Re-generate the proposal from the form? This discards manual text and spacing edits.'))return;
+  textEdit=false;document.body.classList.remove('text-edit');$('#editState').textContent='Off';
+  pbEdit=false;document.body.classList.remove('pb-edit');$('#breakState').textContent='Off';
+  buildDoc();
+  const lvl=$('#densitySel').value; const mount=$('#docMount');
+  mount.classList.remove('density-comfortable','density-normal','density-compact','density-tight');mount.classList.add('density-'+lvl);
+};
 
 /* ---------- Word (.doc) export ---------- */
 function safeName(){const c=(val('college')||'FACE_Prep_Proposal').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'');return c||'FACE_Prep_Proposal';}
@@ -922,10 +1160,11 @@ table.signoff.w-grid td{border:0;border-top:1.5pt solid #1c1c20;padding-top:7pt}
 .notes-grid .nk{background:#faf7f2;font-weight:700;font-size:9.5pt;padding:6pt 9pt;width:30%}
 .notes-grid .nv{font-size:9.5pt;padding:6pt 9pt}
 .sx-next li{margin-bottom:4pt;font-size:9.5pt}
-.signoff .box{border-top:1.5pt solid #1c1c20;padding-top:7pt;margin-top:10pt}
-.signoff .box .r{color:#6b6457;font-size:9pt;text-transform:uppercase;font-weight:700}
-.signoff .box .n{font-weight:800;font-size:12pt;margin-top:3pt}
-.signoff .box .d{color:#6b6457;font-size:9.5pt}
+.owner-card{border:0.75pt solid #e3dccf;border-top:2pt solid #ef4b2b;padding:12pt 14pt;background:#faf7f2;margin-top:12pt}
+.owner-card .oc-label{color:#c93512;font-size:8.5pt;letter-spacing:1pt;text-transform:uppercase;font-weight:700}
+.owner-card .oc-name{font-weight:800;font-size:15pt;margin-top:4pt}
+.owner-card .oc-desg{color:#6b6457;font-size:10pt;margin-top:1pt}
+.owner-card .oc-contact{font-size:10pt;font-weight:700;margin-top:6pt}
 .docfoot{border-top:0.5pt solid #e3dccf;color:#6b6457;font-size:8pt;text-align:center;padding-top:8pt;margin-top:12pt}
 `;
 
@@ -966,7 +1205,8 @@ $('#docxBtn').onclick=()=>{
   clone.querySelectorAll('.sx-band.b4').forEach(b=>toTable(b,2));
   clone.querySelectorAll('.sx-band.b3').forEach(b=>toTable(b,3));
   clone.querySelectorAll('.sx-quad').forEach(q=>toTable(q,2));
-  clone.querySelectorAll('.signoff').forEach(s=>toTable(s,2));
+  // owner contact renders as a normal block in Word; neutralize the print-only flex pin
+  clone.querySelectorAll('.last-sec').forEach(s=>{s.style.display='block';s.style.minHeight='0';});
   // notes-grid rows → table rows
   clone.querySelectorAll('.notes-grid').forEach(ng=>{
     const tbl=document.createElement('table'); tbl.className='notes-grid w-grid';
@@ -978,6 +1218,12 @@ $('#docxBtn').onclick=()=>{
     });
     ng.replaceWith(tbl);
   });
+  // strip on-screen page-break editor controls; translate manual breaks for Word
+  clone.querySelectorAll('.pb-ctrl').forEach(e=>e.remove());
+  clone.querySelectorAll('.blk-tools').forEach(e=>e.remove());
+  clone.querySelectorAll('.blk-hl').forEach(e=>e.classList.remove('blk-hl'));
+  clone.querySelectorAll('[contenteditable]').forEach(e=>e.removeAttribute('contenteditable'));
+  clone.querySelectorAll('.pb-before').forEach(el=>{el.style.pageBreakBefore='always';});
   let bodyHtml=clone.innerHTML;
   const head='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
     +'<head><meta charset="utf-8"><title>'+esc(val('college')||'FACE Prep Proposal')+'</title>'
@@ -1091,16 +1337,23 @@ function buildDoc(){
     <div class="bc"><div class="bn">₹ ${repRate}${mode==='perhour'?'':'/day'} + GST</div><div class="bl">${mode==='perhour'?'Per student per training hour — transparent, scalable pricing.':'Per trainer per day — transparent, scalable pricing.'}</div></div>
   </div>`;
 
-  /* ---- program flow table per batch (mirrors SXCCE §4) ---- */
-  const flow = totals.map(({b})=>{
-    const rows=b.semesters.filter(s=>s.programs.length).map(s=>{
-      const shrs=s.programs.reduce((a,p)=>a+(+p.proposedHours||0),0);
-      const focus=s.programs.map(p=>esc(p.title)).join(', ');
-      const obj=s.programs.map(p=>p.objective).filter(Boolean)[0]||'Structured, outcome-driven skill development aligned to placement goals.';
-      return `<tr><td><b>${esc(s.name)}</b></td><td>${focus}</td><td>${esc(obj)}</td><td>${shrs} Hrs</td></tr>`;
-    }).join('');
+  /* ---- program flow table: one row per program + total rows ---- */
+  const flow = totals.map(({b,t})=>{
     const head = multi?`<tr class="grp"><td colspan="4">${esc(b.name)} · ${b.students} students</td></tr>`:'';
-    return head+rows;
+    let rows='';
+    b.semesters.filter(s=>s.programs.length).forEach(s=>{
+      const shrs=s.programs.reduce((a,p)=>a+(+p.proposedHours||0),0);
+      s.programs.forEach((p,idx)=>{
+        const semCell = idx===0 ? `<td rowspan="${s.programs.length}"><b>${esc(s.name)}</b></td>` : '';
+        const obj = p.objective || 'Structured, outcome-driven skill development aligned to placement goals.';
+        rows+=`<tr>${semCell}<td>${esc(p.title)}</td><td>${esc(obj)}</td><td class="r">${(+p.proposedHours||0)} Hrs</td></tr>`;
+      });
+      if(s.programs.length>1){
+        rows+=`<tr class="subtot"><td colspan="3">${esc(s.name)} — Total</td><td class="r">${shrs} Hrs</td></tr>`;
+      }
+    });
+    const batchTot=`<tr class="totr"><td colspan="3">${multi?esc(b.name)+' — Total':'Total'}</td><td class="r">${t.hours} Hrs</td></tr>`;
+    return head+rows+batchTot;
   }).join('');
 
   /* ---- detailed syllabus (mirrors SXCCE §6) ---- */
@@ -1191,7 +1444,7 @@ function buildDoc(){
       <!-- 4 PROGRAM FLOW -->
       <div class="sec"><div class="sec-h"><span class="no">4</span><h2>${T.flowTitle}</h2></div>
         <p>${T.flowLead}</p>
-        <table class="tbl"><thead><tr><th>${T.flowCol}</th><th>Focus Area / Program(s)</th><th>Learning Objective</th><th>Duration</th></tr></thead>
+        <table class="tbl"><thead><tr><th>${T.flowCol}</th><th>Program</th><th>Learning Objective</th><th class="r">Duration</th></tr></thead>
         <tbody>${flow}</tbody></table>
       </div>
 
@@ -1257,7 +1510,7 @@ function buildDoc(){
       </div>
 
       <!-- 10 NEXT STEPS -->
-      <div class="sec"><div class="sec-h"><span class="no">10</span><h2>Next Steps</h2></div>
+      <div class="sec last-sec"><div class="sec-h"><span class="no">10</span><h2>Next Steps</h2></div>
         <p>We would be glad to take this conversation forward in whatever way works best for ${esc(college)}. Possible next steps include:</p>
         <ul class="sx-next">
           <li>A walkthrough session with the Principal, HoDs, and the Training & Placement cell to align on scope and academic calendar.</li>
@@ -1265,14 +1518,18 @@ function buildDoc(){
           <li>A refined commercial proposal based on confirmed batch composition, target semesters, and scope adjustments.</li>
           <li>Sharing case studies, sample reports, and references from similar institutional engagements.</li>
         </ul>
-        <p class="sx-em">We look forward to partnering with ${esc(college)} in building confident, industry-ready graduates equipped with the skills, competencies, and professional readiness required for the future workforce.</p>
-        <div class="signoff" style="margin-top:18px">
-          <div class="box"><div class="r">Proposed by · FACE Prep</div><div class="n">${esc(ownerNm)}</div><div class="d">${designation?esc(designation)+'<br>':''}${ownerLine}</div></div>
-          <div class="box"><div class="r">Accepted by · ${esc(college)}</div><div class="n">&nbsp;</div><div class="d">Name · Designation · Date</div></div>
+        <div class="closing-block">
+          <p class="sx-em">We look forward to partnering with ${esc(college)} in building confident, industry-ready graduates equipped with the skills, competencies, and professional readiness required for the future workforce.</p>
+          <div class="owner-card">
+            <div class="oc-label">Proposed by · FACE Prep</div>
+            <div class="oc-name">${esc(ownerNm)}</div>
+            ${designation?`<div class="oc-desg">${esc(designation)}</div>`:''}
+            <div class="oc-contact">${ownerLine}</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="docfoot">Prepared for ${esc(college)} • Internal Review &nbsp;·&nbsp; FACE Prep • www.faceprep.in &nbsp;·&nbsp; ${today}</div>
+    <div class="docfoot">Prepared for ${esc(college)} &nbsp;·&nbsp; FACE Prep • www.faceprep.in &nbsp;·&nbsp; ${today}</div>
   </div>`;
 }
 
