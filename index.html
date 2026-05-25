@@ -386,17 +386,21 @@ body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{
   .sx-cover{min-height:297mm;padding:24mm 18mm;box-sizing:border-box;break-after:page;page-break-after:always;display:flex;flex-direction:column}
   .sx-cover::after{display:none}
   .docbody,.sx-body{padding:0 4mm!important}
-  /* keep small atomic blocks together; allow large sections to flow */
-  .sx-prog,.gcard,.sx-band .bc,.sx-quad .qc,.notes-grid .nr,.signoff .box{break-inside:avoid;page-break-inside:avoid}
+  /* keep small atomic blocks together */
+  .gcard,.sx-band .bc,.sx-quad .qc,.notes-grid .nr,.signoff .box{break-inside:avoid;page-break-inside:avoid}
   table tr,table thead,table tr td,table tr th{break-inside:avoid;page-break-inside:avoid}
   thead{display:table-header-group}
-  tfoot{display:table-footer-group}
-  /* keep a heading with its intro text, but do NOT let it drag large unbreakable blocks to the next page */
+  tfoot{display:table-row-group}
+  /* keep headings attached to what follows them */
   .sec-h{break-after:avoid;page-break-after:avoid}
   h3,h4,.sx-bh{break-after:avoid;page-break-after:avoid}
   .sec{break-inside:auto;page-break-inside:auto;margin-bottom:16px}
   .sx-band,.sx-quad{break-inside:avoid;page-break-inside:avoid}
-  .sx-prog{margin-bottom:14px;break-before:auto;page-break-before:auto}
+  /* syllabus blocks may flow across pages (so a heading + first rows stay together);
+     the program header (pill) stays glued to the start of its table */
+  .sx-prog{break-inside:auto;page-break-inside:auto;margin-bottom:14px;break-before:auto;page-break-before:auto}
+  .sx-ph{break-after:avoid;page-break-after:avoid;break-inside:avoid;page-break-inside:avoid}
+  .sx-lo{break-after:avoid;page-break-after:avoid}
   p{orphans:2;widows:2}
   /* manual page breaks set by the user */
   .pb-before{break-before:page!important;page-break-before:always!important}
