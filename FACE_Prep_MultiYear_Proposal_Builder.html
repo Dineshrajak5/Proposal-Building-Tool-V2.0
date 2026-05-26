@@ -239,7 +239,7 @@ ul.incl li::before{content:"";position:absolute;left:0;top:7px;width:11px;height
 
 /* proposal type selector */
 /* login gate */
-.login-gate{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1c1c20,#2a2a30);display:flex;align-items:center;justify-content:center;padding:24px}
+.login-gate{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1c1c20,#2a2a30);display:none;align-items:center;justify-content:center;padding:24px}
 .login-card{background:#fff;border-radius:18px;padding:34px 30px;max-width:400px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.45)}
 .login-logo{display:flex;justify-content:center;margin-bottom:20px}
 .login-logo .fp-logo-svg{height:34px;width:auto}
@@ -249,10 +249,45 @@ ul.incl li::before{content:"";position:absolute;left:0;top:7px;width:11px;height
 .login-err{color:var(--orange-dk);font-size:12.5px;min-height:16px;margin-bottom:8px;font-weight:600}
 .login-foot{text-align:center;color:var(--muted);font-size:11.5px;margin-top:14px}
 .login-foot b{color:var(--ink)}
+.remember{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:2px 0 10px;cursor:pointer;user-select:none}
+.remember input{width:15px;height:15px;accent-color:var(--orange);cursor:pointer}
 body:not(.authed) .topbar,body:not(.authed) .stage,body:not(.authed) .doc-stage{display:none!important}
-.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.home-btn{background:transparent;border:1px solid #3a3a40;color:#cfc9bd;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.home-btn:hover{border-color:var(--orange);color:#fff}
 .signout-btn{background:transparent;border:1px solid #3a3a40;color:#cfc9bd;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer}
 .signout-btn:hover{border-color:var(--orange);color:#fff}
+
+/* WELCOME screen */
+.welcome-screen{position:fixed;inset:0;z-index:190;background:radial-gradient(1200px 600px at 70% -10%,rgba(239,75,43,.22),transparent 60%),linear-gradient(160deg,#1c1c20,#2a2a30);display:none;align-items:center;justify-content:center;padding:24px}
+.welcome-inner{text-align:center;max-width:680px}
+.welcome-logo{display:flex;justify-content:center;margin-bottom:38px}
+.welcome-logo .fp-logo-svg{height:40px;width:auto;background:#fff;padding:9px 14px;border-radius:9px}
+.welcome-quote{font-family:'Nunito Sans',sans-serif;font-weight:800;color:#fff;font-size:clamp(26px,4.5vw,42px);line-height:1.25;letter-spacing:-.01em;margin-bottom:40px}
+.welcome-quote::before,.welcome-quote::after{color:var(--orange)}
+.welcome-cta{font-size:16px;padding:14px 30px;border-radius:12px}
+.welcome-signout{display:block;margin:26px auto 0;background:none;border:none;color:#8d8678;font-size:12.5px;cursor:pointer;text-decoration:underline}
+.welcome-signout:hover{color:#cfc9bd}
+
+/* CHOICE screen */
+.choice-screen{position:fixed;inset:0;z-index:190;background:linear-gradient(160deg,#f7f4ef,#fff);display:none;align-items:center;justify-content:center;padding:24px;overflow:auto}
+.choice-inner{text-align:center;max-width:1000px;width:100%}
+.choice-logo{display:flex;justify-content:center;margin-bottom:26px}
+.choice-logo .fp-logo-svg{height:34px;width:auto}
+.choice-title{font-size:30px;font-weight:800;color:var(--ink);margin-bottom:6px}
+.choice-sub{color:var(--muted);font-size:15px;margin-bottom:34px}
+.choice-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.choice-cards.choice-cards-3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:820px){.choice-cards.choice-cards-3{grid-template-columns:1fr}}
+@media(max-width:620px){.choice-cards{grid-template-columns:1fr}}
+.choice-card{position:relative;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:28px 26px;cursor:pointer;transition:.16s;box-shadow:0 4px 20px rgba(0,0,0,.04)}
+.choice-card:hover{border-color:var(--orange);transform:translateY(-3px);box-shadow:0 16px 40px rgba(239,75,43,.14)}
+.choice-card .cc-icon{font-size:34px;margin-bottom:14px}
+.choice-card .cc-title{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:8px}
+.choice-card .cc-desc{font-size:13.5px;color:var(--muted);line-height:1.5}
+.choice-card .cc-count{margin-top:12px;display:inline-block;font-size:11.5px;font-weight:700;color:var(--orange-dk);background:#fff1ec;border-radius:20px;padding:3px 11px}
+.choice-signout{display:block;margin:30px auto 0;background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;text-decoration:underline}
+.choice-signout:hover{color:var(--ink)}
 
 /* proposal type selector */
 .ptype-field{margin-bottom:15px}
@@ -520,13 +555,53 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
 <div class="login-gate" id="loginGate">
   <div class="login-card">
     <div class="login-logo" id="loginLogo"></div>
-    <h2>Proposal Builder</h2>
+    <h2>Proposal Studio</h2>
     <p class="login-sub">Sign in with your FACE Prep account to continue.</p>
     <label class="fld"><span class="lab">Work email</span><input class="inp" id="loginEmail" type="email" placeholder="you@faceprep.in" autocomplete="username"></label>
     <label class="fld"><span class="lab">Access code</span><input class="inp" id="loginPass" type="password" placeholder="Team access code" autocomplete="current-password"></label>
+    <label class="remember"><input type="checkbox" id="rememberMe" checked> <span>Keep me signed in on this device</span></label>
     <div class="login-err" id="loginErr"></div>
     <button class="btn btn-primary btn-block" id="loginBtn">Sign in →</button>
     <div class="login-foot">Access restricted to <b>@faceprep.in</b> email addresses.</div>
+  </div>
+</div>
+
+<!-- WELCOME SCREEN -->
+<div class="welcome-screen" id="welcomeScreen">
+  <div class="welcome-inner">
+    <div class="welcome-logo" id="welcomeLogo"></div>
+    <div class="welcome-quote">"Let's create proposals that clients can't ignore."</div>
+    <button class="btn btn-primary welcome-cta" id="launchBtn">Launch Proposal Studio →</button>
+    <button class="welcome-signout" id="welcomeSignout">Sign out</button>
+  </div>
+</div>
+
+<!-- CHOICE SCREEN -->
+<div class="choice-screen" id="choiceScreen">
+  <div class="choice-inner">
+    <div class="choice-logo" id="choiceLogo"></div>
+    <h2 class="choice-title">What would you like to do?</h2>
+    <p class="choice-sub">Start a fresh proposal, or pick up a saved one to edit.</p>
+    <div class="choice-cards choice-cards-3">
+      <button class="choice-card" id="craftCard">
+        <div class="cc-icon">✏️</div>
+        <div class="cc-title">Craft New Proposal</div>
+        <div class="cc-desc">Open the builder and create a brand-new proposal from scratch.</div>
+      </button>
+      <button class="choice-card" id="savedCard">
+        <div class="cc-icon">📂</div>
+        <div class="cc-title">Saved Proposals / Drafts</div>
+        <div class="cc-desc">Reopen a draft you saved manually to review, edit and re-export.</div>
+        <div class="cc-count" id="choiceSavedCount"></div>
+      </button>
+      <button class="choice-card" id="generatedCard">
+        <div class="cc-icon">🗂️</div>
+        <div class="cc-title">Previously Generated</div>
+        <div class="cc-desc">Proposals auto-saved each time a PDF was downloaded. Reopen and edit any of them.</div>
+        <div class="cc-count" id="choiceGenCount"></div>
+      </button>
+    </div>
+    <button class="choice-signout" id="choiceSignout">Sign out</button>
   </div>
 </div>
 
@@ -535,6 +610,7 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
   <div class="wrap">
     <div class="brand"><span class="brand-logo" id="brandLogo"></span><span class="brand-sub">· Proposal Builder V2.0</span></div>
     <div class="topbar-right">
+      <button class="home-btn no-print" id="homeBtn" title="Back to menu">⌂ Menu</button>
       <div class="steps">
         <span id="st1" class="on">1 · Configure</span><span class="sep">—</span><span id="st2">2 · Proposal</span>
       </div>
@@ -646,9 +722,17 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
     <!-- SAVED PROPOSALS DRAWER -->
     <div class="saved-drawer" id="savedDrawer">
       <div class="saved-panel">
-        <div class="saved-h"><h3>Saved proposals</h3><button class="saved-close" id="savedClose">×</button></div>
+        <div class="saved-h"><h3>Saved proposals / drafts</h3><button class="saved-close" id="savedClose">×</button></div>
         <div class="saved-b"><div id="savedList"></div></div>
         <div class="saved-foot">Saved in this browser. Use <b>Save</b> after configuring to store the current proposal.</div>
+      </div>
+    </div>
+
+    <div class="saved-drawer" id="genDrawer">
+      <div class="saved-panel">
+        <div class="saved-h"><h3>Previously generated</h3><button class="saved-close" id="genClose">×</button></div>
+        <div class="saved-b"><div id="genList"></div></div>
+        <div class="saved-foot">Auto-saved in this browser each time you downloaded a PDF. Reopen any to edit and re-export.</div>
       </div>
     </div>
   </div>
@@ -685,6 +769,7 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
       <button class="btn btn-ghost btn-sm" id="breakBtn" title="Insert/remove page breaks before each section">✂ Breaks: <b id="breakState">Off</b></button>
       <button class="btn btn-ghost btn-sm" id="resetBtn" title="Re-generate from the form, discarding manual edits">↻ Reset</button>
       <button class="btn btn-ghost btn-sm" id="emailBtn">✉ Email</button>
+      <button class="btn btn-ghost btn-sm" id="saveDocBtn" title="Save this proposal's setup so you can reopen and edit it later">💾 Save</button>
       <button class="btn btn-ghost btn-sm" id="docxBtn">⬇ Word</button>
       <button class="btn btn-primary btn-sm" id="printBtn">⬇ PDF / Print</button>
     </div>
@@ -747,27 +832,84 @@ function logoSVG(){
   return FACEPREP_LOGO_SVG.replace(/mask0_403_72/g,u);
 }
 
-/* ---------- access gate (faceprep.in only) ---------- */
+/* ---------- access gate + screen flow ---------- */
 const ACCESS_CODE='faceprep2026'; // shared team code — change as needed
-function showApp(){document.body.classList.add('authed');$('#loginGate').style.display='none';}
+const AUTH_KEY='faceprep_auth_v1';
+
+// screen states: 'login' | 'welcome' | 'choice' | 'app'
+function setScreen(s){
+  document.body.classList.toggle('authed', s==='app');
+  $('#loginGate').style.display   = s==='login'   ? 'flex':'none';
+  $('#welcomeScreen').style.display= s==='welcome' ? 'flex':'none';
+  $('#choiceScreen').style.display = s==='choice'  ? 'flex':'none';
+  if(s==='choice') refreshChoiceCount();
+}
+function doSignOut(forget){
+  if(forget!==false){try{localStorage.removeItem(AUTH_KEY);}catch(e){}}
+  $('#loginPass').value=''; setScreen('login');
+}
+function refreshChoiceCount(){
+  try{
+    const n=loadSaved().length; const sc=$('#choiceSavedCount'); if(sc) sc.textContent=n? n+' saved':'None yet';
+    const g=loadGenerated().length; const gc=$('#choiceGenCount'); if(gc) gc.textContent=g? g+' generated':'None yet';
+  }catch(e){}
+}
+
 (function(){
-  const gate=$('#loginGate');
+  // logos
   $('#loginLogo').innerHTML=logoSVG();
   $('#brandLogo').innerHTML=logoSVG();
+  $('#welcomeLogo').innerHTML=logoSVG();
+  $('#choiceLogo').innerHTML=logoSVG();
+
+  // restore saved session
+  let saved=null; try{saved=JSON.parse(localStorage.getItem(AUTH_KEY)||'null');}catch(e){}
+  if(saved && saved.email){
+    if(!$('#email').value) $('#email').value=saved.email;
+    setScreen('welcome');           // already signed in → skip straight to welcome
+  } else {
+    setScreen('login');
+  }
+
   const tryLogin=()=>{
     const email=($('#loginEmail').value||'').trim().toLowerCase();
     const pass=($('#loginPass').value||'').trim();
     const err=$('#loginErr');
     if(!/^[^@\s]+@faceprep\.in$/.test(email)){err.textContent='Please use a valid @faceprep.in email address.';return;}
     if(pass!==ACCESS_CODE){err.textContent='Incorrect access code. Please check with your team.';return;}
-    err.textContent=''; showApp();
-    // prefill owner email if empty
+    err.textContent='';
+    if($('#rememberMe').checked){try{localStorage.setItem(AUTH_KEY,JSON.stringify({email,at:Date.now()}));}catch(e){}}
     if(!$('#email').value) $('#email').value=email;
+    setScreen('welcome');
   };
   $('#loginBtn').onclick=tryLogin;
   [$('#loginEmail'),$('#loginPass')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();}));
-  $('#signOut').onclick=()=>{document.body.classList.remove('authed');gate.style.display='flex';$('#loginPass').value='';};
+
+  // welcome → choice
+  $('#launchBtn').onclick=()=>setScreen('choice');
+  // choice → app (new) / saved
+  $('#craftCard').onclick=()=>{ startNewProposal(); setScreen('app'); };
+  $('#savedCard').onclick=()=>{ setScreen('app'); openDrawer(); };
+  $('#generatedCard').onclick=()=>{ setScreen('app'); openGenDrawer(); };
+  // back to menu from app
+  $('#homeBtn').onclick=()=>setScreen('choice');
+  // sign-outs
+  $('#signOut').onclick=()=>doSignOut(true);
+  $('#welcomeSignout').onclick=()=>doSignOut(true);
+  $('#choiceSignout').onclick=()=>doSignOut(true);
 })();
+
+// start a fresh proposal (reset builder to a clean single batch)
+function startNewProposal(){
+  batches=[newBatch(0)];
+  // ensure we're on the configure stage, not a stale generated doc
+  $('#docStage').classList.remove('show');
+  $('#builder').style.display='block';
+  $('#st2') && $('#st2').classList.remove('on');
+  $('#st1') && ($('#st1').className='on', $('#st1').textContent='1 · Configure');
+  render();
+  window.scrollTo(0,0);
+}
 
 
 
@@ -1057,6 +1199,7 @@ $('#printBtn').onclick=()=>{
   document.querySelectorAll('#docMount .blk-hl').forEach(e=>e.classList.remove('blk-hl'));
   document.body.classList.remove('text-edit');$('#editState').textContent='Off';textEdit=false;
   const h=document.getElementById('edHint'); if(h)h.style.display='none';
+  autoSaveGenerated();   // auto-store this proposal in "Previously Generated"
   window.print();
 };
 
@@ -1718,9 +1861,31 @@ function buildDoc(){
 
 /* ---------- save / recall proposals (localStorage) ---------- */
 const STORE_KEY='faceprep_saved_proposals_v1';
+const GEN_STORE_KEY='faceprep_generated_proposals_v1';
 function storageOK(){try{const k='__t';localStorage.setItem(k,'1');localStorage.removeItem(k);return true;}catch(e){return false;}}
 function loadSaved(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch(e){return [];}}
 function writeSaved(arr){try{localStorage.setItem(STORE_KEY,JSON.stringify(arr));}catch(e){alert('Could not save — browser storage is full or blocked.');}}
+function loadGenerated(){try{return JSON.parse(localStorage.getItem(GEN_STORE_KEY)||'[]');}catch(e){return [];}}
+function writeGenerated(arr){try{localStorage.setItem(GEN_STORE_KEY,JSON.stringify(arr));}catch(e){}}
+function autoSaveGenerated(){
+  // auto-store the current proposal in the "Previously Generated" list on download
+  if(!storageOK()) return;
+  if(!val('college') && !batches.length) return;
+  const arr=loadGenerated();
+  const snap=snapshot(); snap.name=defaultName(); snap.id=uid(); snap.generatedAt=Date.now();
+  // avoid duplicate spam: if an identical college+ptype+hours was saved in the last 60s, replace it
+  const sig=snap.college+'|'+snap.ptype+'|'+JSON.stringify(snap.batches).length;
+  const recent=arr[0];
+  if(recent && (Date.now()-recent.savedAt<60000) && (recent.college+'|'+recent.ptype+'|'+JSON.stringify(recent.batches).length)===sig){
+    arr[0]=snap; // refresh the very recent one instead of adding a near-duplicate
+  } else {
+    arr.unshift(snap);
+  }
+  // cap the history at 50 entries
+  if(arr.length>50) arr.length=50;
+  writeGenerated(arr);
+  refreshChoiceCount();
+}
 function snapshot(){
   return {
     v:1, savedAt:Date.now(),
@@ -1748,16 +1913,18 @@ function applySnapshot(s){
 }
 function defaultName(){const c=val('college')||'Untitled';return c+' · '+(ptype==='bootcamp'?'Bootcamp':'Semester')+' · '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'});}
 function refreshSaveCount(){const n=loadSaved().length;$('#saveCount').textContent=n?'('+n+')':'';}
-$('#saveBtn').onclick=()=>{
+function saveCurrent(btnId){
   if(!storageOK()){alert('Saving needs browser storage, which is unavailable here. Once hosted (e.g. on Vercel) saving will work normally.');return;}
-  if(!val('college') && !Object.keys(batches).length){alert('Add some details first.');return;}
+  if(!val('college') && !batches.length){alert('Add some details first.');return;}
   const name=prompt('Save this proposal as:', defaultName());
   if(name===null) return;
   const arr=loadSaved();
   const snap=snapshot(); snap.name=name.trim()||defaultName(); snap.id=uid();
   arr.unshift(snap); writeSaved(arr); refreshSaveCount();
-  const btn=$('#saveBtn'); const old=btn.textContent; btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent=old,1200);
-};
+  const btn=$('#'+btnId); if(btn){const old=btn.innerHTML; btn.innerHTML='✓ Saved'; setTimeout(()=>btn.innerHTML=old,1300);}
+}
+$('#saveBtn').onclick=()=>saveCurrent('saveBtn');
+$('#saveDocBtn') && ($('#saveDocBtn').onclick=()=>saveCurrent('saveDocBtn'));
 function renderSavedList(){
   const host=$('#savedList'); const arr=loadSaved();
   if(!arr.length){host.innerHTML='<div class="empty-hint">No saved proposals yet.</div>';return;}
@@ -1784,6 +1951,34 @@ function closeDrawer(){$('#savedDrawer').classList.remove('show');}
 $('#openBtn').onclick=openDrawer;
 $('#savedClose').onclick=closeDrawer;
 $('#savedDrawer').onclick=e=>{if(e.target.id==='savedDrawer')closeDrawer();};
+
+/* ----- previously generated drawer ----- */
+function renderGenList(){
+  const host=$('#genList'); const arr=loadGenerated();
+  if(!arr.length){host.innerHTML='<div class="empty-hint">No generated proposals yet. Download a PDF and it will be auto-saved here.</div>';return;}
+  host.innerHTML='';
+  arr.forEach(s=>{
+    const when=new Date(s.generatedAt||s.savedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const nB=(s.batches||[]).length, nP=(s.batches||[]).reduce((a,b)=>a+(b.semesters||[]).reduce((x,sm)=>x+(sm.programs||[]).length,0),0);
+    const row=document.createElement('div'); row.className='saved-item';
+    row.innerHTML=`<div class="si-main"><div class="si-name">${esc(s.name||'Untitled')}</div>
+        <div class="si-meta">${esc(s.college||'—')} · ${nB} batch${nB!==1?'es':''} · ${nP} program${nP!==1?'s':''} · ${s.ptype==='bootcamp'?'Bootcamp':'Semester'}<br><span class="si-when">Generated ${when}</span></div></div>
+      <div class="si-actions"><button class="btn btn-primary btn-sm" data-gload="${s.id}">Open</button><button class="si-del" data-gdel="${s.id}" title="Delete">🗑</button></div>`;
+    host.appendChild(row);
+  });
+  host.querySelectorAll('[data-gload]').forEach(b=>b.onclick=()=>{
+    const s=loadGenerated().find(x=>x.id===b.dataset.gload); if(s){applySnapshot(s);closeGenDrawer();}
+  });
+  host.querySelectorAll('[data-gdel]').forEach(b=>b.onclick=()=>{
+    if(!confirm('Remove this from previously generated?'))return;
+    writeGenerated(loadGenerated().filter(x=>x.id!==b.dataset.gdel)); renderGenList(); refreshChoiceCount();
+  });
+}
+function openGenDrawer(){renderGenList();$('#genDrawer').classList.add('show');}
+function closeGenDrawer(){$('#genDrawer').classList.remove('show');}
+$('#genClose').onclick=closeGenDrawer;
+$('#genDrawer').onclick=e=>{if(e.target.id==='genDrawer')closeGenDrawer();};
+
 refreshSaveCount();
 
 /* init: start with one batch to guide the user */
