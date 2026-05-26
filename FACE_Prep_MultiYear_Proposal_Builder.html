@@ -228,11 +228,13 @@ ul.incl li::before{content:"";position:absolute;left:0;top:7px;width:11px;height
 .docfoot{text-align:center;color:var(--muted);font-size:12px;padding:24px;border-top:1px solid var(--line)}
 /* closing block + owner contact card */
 .closing-block{margin-top:22px}
-.owner-card{margin-top:18px;border:1px solid var(--line);border-top:3px solid var(--orange);border-radius:12px;padding:18px 20px;background:var(--paper)}
+.owner-card{margin-top:18px;border:1px solid var(--line);border-top:3px solid var(--orange);border-radius:12px;padding:14px 20px;background:var(--paper)}
 .owner-card .oc-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--orange-dk);font-weight:700}
-.owner-card .oc-name{font-size:20px;font-weight:800;margin-top:6px;color:var(--ink)}
-.owner-card .oc-desg{font-size:13.5px;color:var(--muted);margin-top:2px}
-.owner-card .oc-contact{font-size:13.5px;color:#2c2a25;margin-top:8px;font-weight:600}
+.owner-card .oc-line{margin-top:6px;font-size:15px;color:#2c2a25;line-height:1.4}
+.owner-card .oc-name{font-size:17px;font-weight:800;color:var(--ink)}
+.owner-card .oc-desg{color:var(--muted);font-weight:600}
+.owner-card .oc-sep{color:var(--line-dk)}
+.owner-card .oc-contact{font-weight:600}
 .empty-hint{padding:18px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--line-dk);border-radius:10px}
 
 /* proposal type selector */
@@ -1333,11 +1335,13 @@ table.signoff.w-grid td{border:0;border-top:1.5pt solid #1c1c20;padding-top:7pt}
 .notes-grid .nk{background:#faf7f2;font-weight:700;font-size:9.5pt;padding:6pt 9pt;width:30%}
 .notes-grid .nv{font-size:9.5pt;padding:6pt 9pt}
 .sx-next li{margin-bottom:4pt;font-size:9.5pt}
-.owner-card{border:0.75pt solid #e3dccf;border-top:2pt solid #ef4b2b;padding:12pt 14pt;background:#faf7f2;margin-top:12pt}
+.owner-card{border:0.75pt solid #e3dccf;border-top:2pt solid #ef4b2b;padding:10pt 14pt;background:#faf7f2;margin-top:12pt}
 .owner-card .oc-label{color:#c93512;font-size:8.5pt;letter-spacing:1pt;text-transform:uppercase;font-weight:700}
-.owner-card .oc-name{font-weight:800;font-size:15pt;margin-top:4pt}
-.owner-card .oc-desg{color:#6b6457;font-size:10pt;margin-top:1pt}
-.owner-card .oc-contact{font-size:10pt;font-weight:700;margin-top:6pt}
+.owner-card .oc-line{font-size:11pt;margin-top:3pt}
+.owner-card .oc-name{font-weight:800;font-size:13pt}
+.owner-card .oc-desg{color:#6b6457}
+.owner-card .oc-sep{color:#b8b2a6}
+.owner-card .oc-contact{font-weight:700}
 .docfoot{border-top:0.5pt solid #e3dccf;color:#6b6457;font-size:8pt;text-align:center;padding-top:8pt;margin-top:12pt}
 `;
 
@@ -1702,9 +1706,7 @@ function buildDoc(){
           <p class="sx-em">We look forward to partnering with ${esc(college)} in building confident, industry-ready graduates equipped with the skills, competencies, and professional readiness required for the future workforce.</p>
           <div class="owner-card">
             <div class="oc-label">Proposed by · FACE Prep</div>
-            <div class="oc-name">${esc(ownerNm)}</div>
-            ${designation?`<div class="oc-desg">${esc(designation)}</div>`:''}
-            <div class="oc-contact">${ownerLine}</div>
+            <div class="oc-line"><span class="oc-name">${esc(ownerNm)}</span>${designation?`<span class="oc-desg">, ${esc(designation)}</span>`:''}<span class="oc-sep"> · </span><span class="oc-contact">${ownerLine}</span></div>
           </div>
         </div>
       </div>
