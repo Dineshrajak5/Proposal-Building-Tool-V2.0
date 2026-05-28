@@ -60,6 +60,8 @@ label.fld .lab,.lab{display:block;font-size:11.5px;font-weight:700;letter-spacin
 .inp,select.inp{width:100%;padding:10px 12px;border:1px solid var(--line-dk);border-radius:9px;background:#fffdf9;font-size:14px;color:var(--ink);transition:border .15s,box-shadow .15s}
 .inp:focus,select.inp:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(239,75,43,.13)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row1{display:block;margin-top:12px}
+.lab-opt{font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;font-size:11px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media(max-width:560px){.row2,.row3,.row4{grid-template-columns:1fr}}
@@ -155,6 +157,18 @@ label.fld .lab,.lab{display:block;font-size:11.5px;font-weight:700;letter-spacin
 .docbar .lft{font-size:13px;color:var(--muted)}
 .docbar .rgt{display:flex;gap:9px}
 .page{background:#fff;max-width:940px;margin:24px auto;box-shadow:0 4px 30px rgba(13,13,15,.1);border-radius:4px;overflow:hidden}
+
+/* live A4 preview mode */
+body.pg-preview .doc-stage{background:#4a4a52}
+body.pg-preview #docMount{padding:30px 0}
+body.pg-preview .page{position:relative;width:703px;max-width:703px;margin:0 auto;border-radius:0;box-shadow:0 6px 40px rgba(0,0,0,.4);overflow:visible}
+body.pg-preview .page .pg-guide{position:absolute;left:0;right:0;height:0;border-top:2px dashed #ef4b2b;pointer-events:none;z-index:8}
+body.pg-preview .page .pg-guide::before{content:"";position:absolute;left:-703px;right:-703px;top:-1px;border-top:1px solid rgba(255,255,255,.35)}
+body.pg-preview .page .pg-guide .pg-tag{position:absolute;right:6px;top:3px;background:#ef4b2b;color:#fff;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:4px;white-space:nowrap}
+body.pg-preview .page .pg-guide.forced{border-top-color:#f0a500}
+body.pg-preview .page .pg-guide.forced .pg-tag{background:#c98a00}
+body.pg-preview .page .pg-guide.mid{border-top-style:dotted;opacity:.7}
+#previewBtn.on,#previewBtn b{color:var(--orange)}
 .cover{background:var(--ink);color:#fff;padding:60px 58px 50px;position:relative;overflow:hidden}
 .cover::after{content:"";position:absolute;right:-90px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(239,75,43,.42),transparent 70%)}
 .cover .mk{display:inline-flex;gap:9px;align-items:center;font-weight:800;font-size:15px;margin-bottom:38px}
@@ -645,6 +659,9 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
               <label class="fld"><span class="lab" id="collegeLab">College / Institution</span><input class="inp" id="college" placeholder="e.g. Jeppiaar University & Engineering College"></label>
               <label class="fld"><span class="lab">City / Location</span><input class="inp" id="city" placeholder="e.g. Chennai"></label>
             </div>
+            <div class="row1">
+              <label class="fld"><span class="lab">Proposal title <span class="lab-opt">(optional — overrides the cover heading)</span></span><input class="inp" id="ptitle" placeholder="e.g. Placement Readiness Bootcamp 2026"></label>
+            </div>
 
             <div class="row2">
               <label class="fld"><span class="lab">Proposal owner</span><input class="inp" id="owner" placeholder="Your name"></label>
@@ -769,6 +786,7 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
         </select>
       </div>
       <button class="btn btn-ghost btn-sm" id="breakBtn" title="Insert/remove page breaks before each section">✂ Breaks: <b id="breakState">Off</b></button>
+      <button class="btn btn-ghost btn-sm" id="previewBtn" title="Show a live A4 page preview with page-break guides on the right">🖥 Live preview: <b id="previewState">Off</b></button>
       <button class="btn btn-ghost btn-sm" id="resetBtn" title="Re-generate from the form, discarding manual edits">↻ Reset</button>
       <button class="btn btn-ghost btn-sm" id="emailBtn">✉ Email</button>
       <button class="btn btn-ghost btn-sm" id="saveDocBtn" title="Save this proposal's setup so you can reopen and edit it later">💾 Save</button>
@@ -1214,6 +1232,7 @@ $('#printBtn').onclick=()=>{
   document.querySelectorAll('#docMount .blk-hl').forEach(e=>e.classList.remove('blk-hl'));
   document.body.classList.remove('text-edit');$('#editState').textContent='Off';textEdit=false;
   const h=document.getElementById('edHint'); if(h)h.style.display='none';
+  clearPageGuides();   // guides are screen-only; remove before printing
   autoSaveGenerated();   // auto-store this proposal in "Previously Generated"
   window.print();
 };
@@ -1236,7 +1255,7 @@ function decoratePB(){
     bar.innerHTML=`<button class="pb-toggle ${on?'on':''}" title="Start this block on a new page">
         <span class="pb-ico">${on?'✓':'✂'}</span> ${on?'Page break ON — starts on new page':'Insert page break before this'}
       </button>`;
-    bar.querySelector('.pb-toggle').onclick=()=>{el.classList.toggle('pb-before');decoratePB();};
+    bar.querySelector('.pb-toggle').onclick=()=>{el.classList.toggle('pb-before');decoratePB();if(previewOn)requestAnimationFrame(paginatePreview);};
     el.parentNode.insertBefore(bar, el);
   });
 }
@@ -1260,7 +1279,83 @@ $('#densitySel').onchange=e=>{
   const mount=$('#docMount');
   mount.classList.remove('density-comfortable','density-normal','density-compact','density-tight');
   mount.classList.add('density-'+lvl);
+  if(previewOn) requestAnimationFrame(paginatePreview);
 };
+
+/* ---------- live A4 page preview ---------- */
+let previewOn=false;
+// A4 content height at 96dpi with the print margins used (page 297mm tall, ~12mm top/bottom margins)
+const MM2PX = 96/25.4;
+const A4_PAGE_PX = 297*MM2PX;            // full A4 height in px
+const PAGE_MARGIN_PX = 12*MM2PX;         // print margin top+bottom (matches @page margin)
+const CONTENT_PER_PAGE = A4_PAGE_PX - 2*PAGE_MARGIN_PX;
+
+function clearPageGuides(){ document.querySelectorAll('#docMount .pg-guide').forEach(e=>e.remove()); }
+
+function paginatePreview(){
+  clearPageGuides();
+  if(!previewOn) return;
+  const page=document.querySelector('#docMount .page');
+  if(!page) return;
+  // walk the major blocks; place a guide line wherever the running height crosses a page boundary,
+  // and reset to a new page at any forced break (.pb-before) or the cover.
+  const blocks=[...page.children].filter(el=>!el.classList.contains('pg-guide'));
+  const pageTop = page.getBoundingClientRect().top;
+  let pageStart = 0;     // y (relative to page top) where the current printed page began
+  let pageNo = 1;
+  const guides=[];
+  blocks.forEach((el)=>{
+    const r=el.getBoundingClientRect();
+    const top = r.top - pageTop;
+    const bottom = r.bottom - pageTop;
+    const isCover = el.classList.contains('sx-cover');
+    const forced = el.classList.contains('pb-before');
+    if(isCover){
+      // cover always occupies its own first page
+      pageStart = bottom; pageNo=2;
+      guides.push({y:bottom, label:'Page 2'});
+      return;
+    }
+    if(forced && top>pageStart+4){
+      pageStart = top; pageNo++;
+      guides.push({y:top, label:'Page '+pageNo, forced:true});
+    }
+    // if this block pushes past the current page's content height, start a new page at its top
+    while(bottom - pageStart > CONTENT_PER_PAGE){
+      // break before this block (most realistic: blocks avoid splitting)
+      if(top - pageStart > 8){
+        pageStart = top; pageNo++;
+        guides.push({y:top, label:'Page '+pageNo});
+        break;
+      } else {
+        // block itself taller than a page (e.g. long table) — mark an internal boundary
+        pageStart += CONTENT_PER_PAGE; pageNo++;
+        guides.push({y:pageStart, label:'Page '+pageNo, mid:true});
+      }
+    }
+  });
+  // draw guides
+  guides.forEach(g=>{
+    const line=document.createElement('div');
+    line.className='pg-guide no-print'+(g.forced?' forced':'')+(g.mid?' mid':'');
+    line.style.top=g.y+'px';
+    line.innerHTML=`<span class="pg-tag">${g.label}${g.forced?' · forced break':''}</span>`;
+    page.appendChild(line);
+  });
+}
+
+$('#previewBtn').onclick=()=>{
+  previewOn=!previewOn;
+  document.body.classList.toggle('pg-preview',previewOn);
+  $('#previewState').textContent=previewOn?'On':'Off';
+  if(previewOn){ requestAnimationFrame(()=>requestAnimationFrame(paginatePreview)); }
+  else clearPageGuides();
+};
+// recompute guides on resize and after edits
+window.addEventListener('resize',()=>{ if(previewOn) requestAnimationFrame(paginatePreview); });
+// while editing text in preview mode, recompute page guides (debounced)
+let _pgT=null;
+$('#docMount').addEventListener('input',()=>{ if(previewOn){ clearTimeout(_pgT); _pgT=setTimeout(paginatePreview,250);} });
 
 /* ---------- inline text + layout editor ---------- */
 let textEdit=false;
@@ -1289,6 +1384,7 @@ function decorateEdit(){
       if(act==='up'){mt=Math.max(-30,mt-8);el.style.marginTop=mt+'px';}
       else if(act==='down'){mt=mt+8;el.style.marginTop=mt+'px';}
       else if(act==='del'){ if(confirm('Delete this block from the proposal?')){el.remove();} }
+      if(previewOn) requestAnimationFrame(paginatePreview);
     });
     el.appendChild(tools);
   });
@@ -1556,6 +1652,7 @@ $('#docxBtn').onclick=()=>{
   // strip on-screen page-break editor controls; translate manual breaks for Word
   clone.querySelectorAll('.pb-ctrl').forEach(e=>e.remove());
   clone.querySelectorAll('.blk-tools').forEach(e=>e.remove());
+  clone.querySelectorAll('.pg-guide').forEach(e=>e.remove());
   clone.querySelectorAll('.blk-hl').forEach(e=>e.classList.remove('blk-hl'));
   clone.querySelectorAll('[contenteditable]').forEach(e=>e.removeAttribute('contenteditable'));
   clone.querySelectorAll('.pb-before').forEach(el=>{el.style.pageBreakBefore='always';});
@@ -1594,6 +1691,7 @@ function dayLabel(acc,dur){const sd=Math.floor(acc/PER_DAY)+1;const ed=Math.floo
 
 function buildDoc(){
   const college=val('college')||'the Institution', city=val('city');
+  const customTitle=esc(val('ptitle'));
   const gst=+val('gst')||0, mode=$('#pmode').value;
   const today=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
   const validDays=+val('validity')||60;
@@ -1823,7 +1921,7 @@ function buildDoc(){
       </div>
       <div class="cover-mid">
         <div class="ctype">${T.ctype}</div>
-        <h1>${T.coverTitle}</h1>
+        <h1>${customTitle || T.coverTitle}</h1>
         <div class="prep">Prepared exclusively for</div>
         <div class="coll">${esc(college)}</div>
         ${city?`<div class="loc">${esc(city)}</div>`:''}
@@ -1989,14 +2087,14 @@ function autoSaveGenerated(){
 function snapshot(){
   return {
     v:1, savedAt:Date.now(),
-    college:val('college'),city:val('city'),owner:val('owner'),designation:val('designation'),
+    college:val('college'),city:val('city'),ptitle:val('ptitle'),owner:val('owner'),designation:val('designation'),
     email:val('email'),phone:val('phone'),pmode:$('#pmode').value,gst:val('gst'),validity:val('validity'),
     ptype, logoDataUrl, payments:JSON.parse(JSON.stringify(payments)),
     batches:JSON.parse(JSON.stringify(batches))
   };
 }
 function applySnapshot(s){
-  $('#college').value=s.college||'';$('#city').value=s.city||'';
+  $('#college').value=s.college||'';$('#city').value=s.city||'';$('#ptitle')&&($('#ptitle').value=s.ptitle||'');
   $('#owner').value=s.owner||'';$('#designation').value=s.designation||'';
   $('#email').value=s.email||'';$('#phone').value=s.phone||'';
   $('#pmode').value=s.pmode||'perhour';$('#gst').value=s.gst||'18';$('#validity').value=s.validity||'60';
