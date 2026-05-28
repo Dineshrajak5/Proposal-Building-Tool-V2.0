@@ -1792,6 +1792,28 @@ function buildDoc(){
     mode==='perstudentprog'  ? `Cost per Student = ₹ ${repRate} flat for the program + ${gst}% GST` :
                                `Total Cost = Number of Training Days × ₹ ${repRate} per trainer + ${gst}% GST`;
 
+  // auto-incrementing section numbers so inserting/removing sections renumbers automatically
+  let _sn=0; const sn=()=>++_sn;
+
+  // Trainer Expertise — cards tailored to the selected program categories
+  function buildTrainerCards(){
+    const c=[];
+    if(has.tech || has.coding || has.cloud || has.data)
+      c.push(['Hands-On Technical Depth','Our technology trainers are practitioners first — they bring real project and industry coding experience, so sessions are built around live coding, debugging and building working solutions rather than theory.']);
+    if(has.apti)
+      c.push(['Strong Problem Solvers','Aptitude is led by trainers who are sharp problem solvers themselves, skilled at breaking down complex quantitative and logical problems into simple, repeatable techniques students can apply under exam pressure.']);
+    if(has.soft || has.comm)
+      c.push(['Experiential Soft-Skills Facilitation','Soft-skills sessions are delivered through experiential learning — role-plays, mock interviews, group discussions and live feedback — so students practise and internalise skills rather than just hear about them.']);
+    if(has.career || has.higherEd)
+      c.push(['Mentors & Career Guides','Career and higher-education guidance is handled by mentors who counsel students one-on-one, drawing on broad exposure to industry roles and admission pathways to give grounded, practical direction.']);
+    // always-relevant anchor
+    c.push(['Trained, Assessed & Consistent','Every FACE Prep trainer is screened, trained on our methodology and continuously assessed on student feedback and outcomes — ensuring a consistent, high-quality experience across batches and locations.']);
+    if(c.length>4){ const last=c.pop(); return c.slice(0,3).concat([last]); }
+    return c;
+  }
+  const trainerCards = buildTrainerCards();
+  const trainerLead = `Outcomes depend as much on who delivers the training as on what is delivered. Our trainers for ${esc(college)} are selected to match the specific programs in this plan — combining domain expertise with a teaching style suited to each skill area.`;
+
   $('#docMount').innerHTML=`<div class="page sx">
     <!-- COVER -->
     <div class="sx-cover">
@@ -1818,14 +1840,14 @@ function buildDoc(){
     <div class="docbody sx-body">
 
       <!-- 1 GLANCE -->
-      <div class="sec"><div class="sec-h"><span class="no">1</span><h2>Proposal at a Glance</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>Proposal at a Glance</h2></div>
         <p>${T.glanceLead}</p>
         <p>${T.glanceP2}</p>
         ${glance}
       </div>
 
       <!-- 2 ABOUT -->
-      <div class="sec"><div class="sec-h"><span class="no">2</span><h2>About FACE Prep</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>About FACE Prep</h2></div>
         <p>FACE Prep is one of India's most trusted skill development and employability transformation organizations, working extensively with higher education institutions to bridge the gap between academic learning and industry expectations. With nearly two decades of experience, FACE Prep brings deep domain expertise to every institutional engagement.</p>
         <div class="sx-band b3">
           <div class="bc"><div class="bn">18+</div><div class="bt">Years of Experience</div><div class="bl">Deep domain expertise in employability transformation across India's higher education landscape.</div></div>
@@ -1835,8 +1857,16 @@ function buildDoc(){
         <p class="sx-em">FACE Prep's outcome-focused training models have consistently enabled institutions to improve placement readiness, communication skills, aptitude proficiency, and technical competencies — delivering measurable results that matter to both students and institutions.</p>
       </div>
 
-      <!-- 3 VISION / APPROACH -->
-      <div class="sec"><div class="sec-h"><span class="no">3</span><h2>${T.visionTitle}</h2></div>
+      <!-- TRAINER EXPERTISE -->
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>Trainer Expertise</h2></div>
+        <p>${trainerLead}</p>
+        <div class="sx-quad">
+          ${trainerCards.map(c=>`<div class="qc"><h4>${c[0]}</h4><p>${c[1]}</p></div>`).join('')}
+        </div>
+      </div>
+
+      <!-- VISION / APPROACH -->
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>${T.visionTitle}</h2></div>
         <p>${T.visionLead}</p>
         <div class="sx-quad">
           ${visionCardsDyn.map(c=>`<div class="qc"><h4>${c[0]}</h4><p>${c[1]}</p></div>`).join('')}
@@ -1844,20 +1874,20 @@ function buildDoc(){
       </div>
 
       <!-- 4 PROGRAM FLOW -->
-      <div class="sec"><div class="sec-h"><span class="no">4</span><h2>${T.flowTitle}</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>${T.flowTitle}</h2></div>
         <p>${T.flowLead}</p>
         <table class="tbl"><thead><tr><th>${T.flowCol}</th><th>Program</th><th>Learning Objective</th><th class="r">Duration</th></tr></thead>
         <tbody>${flow}</tbody></table>
       </div>
 
       <!-- 5 DETAILED SYLLABUS -->
-      <div class="sec"><div class="sec-h"><span class="no">5</span><h2>Detailed Syllabus</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>Detailed Syllabus</h2></div>
         <p>This section details the topic-wise syllabus, sub-topics, and indicative duration for each program. ${multi?'Programs are grouped by cohort. ':''}The hour allocation shown for each program reflects the proposed duration for this ${T.frameworkWord}.</p>
         ${syllabus}
       </div>
 
       <!-- 6 COMMERCIAL -->
-      <div class="sec"><div class="sec-h"><span class="no">6</span><h2>Commercial Proposal</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>Commercial Proposal</h2></div>
         <p>The ${T.frameworkWord} is offered on ${PL.model} — enabling ${esc(college)} to scale ${multi?'across cohorts, batches and ':'across batches, '}departments with complete clarity on costs.</p>
         <div class="sx-band b3 price">
           <div class="bc"><div class="bn">₹ ${repRate}</div><div class="bt">Base Rate</div><div class="bl">${PL.baseDesc}</div></div>
@@ -1872,7 +1902,7 @@ function buildDoc(){
       </div>
 
       <!-- 7 INCLUDED -->
-      <div class="sec"><div class="sec-h"><span class="no">7</span><h2>What's Included</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>What's Included</h2></div>
         <p>The proposed pricing covers the following deliverables across the engagement:</p>
         <div class="sx-quad inc">
           <div class="qc"><h4>Training Delivery</h4><ul><li>Instructor-led classroom training by certified trainers</li><li>Printed material for non-technical programs</li><li>Digital learning content for technical programs</li><li>Practice portal and coding-platform access</li></ul></div>
@@ -1883,7 +1913,7 @@ function buildDoc(){
       </div>
 
       <!-- 8 PRICING NOTES -->
-      <div class="sec"><div class="sec-h"><span class="no">8</span><h2>Pricing Notes</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>Pricing Notes</h2></div>
         <div class="notes-grid">
           <div class="nr"><div class="nk">Pricing Model</div><div class="nv">₹ ${repRate} ${PL.notes}, plus ${gst}% GST. Effective ₹ ${effRate.toLocaleString('en-IN',{maximumFractionDigits:2})} inclusive of taxes.${multi?' Rates set per '+T.semWord.toLowerCase()+' within each cohort.':''}</div></div>
           <div class="nr"><div class="nk">Batch Composition</div><div class="nv">Indicative batch sizes shown for reference. Final invoicing based on actual enrolled student strength.</div></div>
@@ -1899,7 +1929,7 @@ function buildDoc(){
       </div>
 
       <!-- 9 EXPECTED OUTCOMES -->
-      <div class="sec"><div class="sec-h"><span class="no">9</span><h2>Expected Outcomes</h2></div>
+      <div class="sec"><div class="sec-h"><span class="no">${sn()}</span><h2>Expected Outcomes</h2></div>
         <p>${isBoot?`This bootcamp is positioned as an intensive, outcome-first skilling sprint — combining hands-on training, assessments, analytics and personalized interventions to deliver measurable capability gains for every participant at ${esc(college)}.`:`This engagement is positioned as a long-term employability transformation framework — integrating skill development, assessments, analytics, personalized interventions, and placement readiness into ${esc(college)}'s regular academic journey.`}</p>
         <div class="sx-quad out">
           ${outcomeCardsDyn.map(c=>`<div class="qc"><h4>${c[0]}</h4><p>${c[1]}</p></div>`).join('')}
@@ -1907,7 +1937,7 @@ function buildDoc(){
       </div>
 
       <!-- 10 NEXT STEPS -->
-      <div class="sec last-sec"><div class="sec-h"><span class="no">10</span><h2>Next Steps</h2></div>
+      <div class="sec last-sec"><div class="sec-h"><span class="no">${sn()}</span><h2>Next Steps</h2></div>
         <p>We would be glad to take this conversation forward in whatever way works best for ${esc(college)}. Possible next steps include:</p>
         <ul class="sx-next">
           <li>A walkthrough session with the Principal, HoDs, and the Training & Placement cell to align on scope and academic calendar.</li>
