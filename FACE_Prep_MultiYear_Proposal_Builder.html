@@ -659,6 +659,8 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
               <label class="fld"><span class="lab">Pricing model</span>
                 <select class="inp" id="pmode">
                   <option value="perhour">Per student / hour</option>
+                  <option value="perstudentday">Per student / day (6 hr/day)</option>
+                  <option value="perstudentprog">Per student — flat (for the program)</option>
                   <option value="perday">Per trainer / day (6 hr/day)</option>
                 </select></label>
               <label class="fld"><span class="lab">GST %</span><input class="inp" type="number" id="gst" value="18" step="0.5"></label>
@@ -889,8 +891,8 @@ function refreshChoiceCount(){
   $('#launchBtn').onclick=()=>setScreen('choice');
   // choice → app (new) / saved
   $('#craftCard').onclick=()=>{ startNewProposal(); setScreen('app'); };
-  $('#savedCard').onclick=()=>{ setScreen('app'); openDrawer(); };
-  $('#generatedCard').onclick=()=>{ setScreen('app'); openGenDrawer(); };
+  $('#savedCard').onclick=()=>{ showCleanBuilder(); setScreen('app'); openDrawer(); };
+  $('#generatedCard').onclick=()=>{ showCleanBuilder(); setScreen('app'); openGenDrawer(); };
   // back to menu from app
   $('#homeBtn').onclick=()=>setScreen('choice');
   // sign-outs
@@ -909,6 +911,14 @@ function startNewProposal(){
   $('#st1') && ($('#st1').className='on', $('#st1').textContent='1 · Configure');
   render();
   window.scrollTo(0,0);
+}
+// return to the form view (hide any previously generated proposal) WITHOUT clearing data,
+// so opening a drawer from the menu doesn't flash the last proposal
+function showCleanBuilder(){
+  $('#docStage').classList.remove('show');
+  $('#builder').style.display='block';
+  $('#st2') && $('#st2').classList.remove('on');
+  $('#st1') && ($('#st1').className='on', $('#st1').textContent='1 · Configure');
 }
 
 
@@ -992,7 +1002,7 @@ function applyVariant(p,vi){
   p.proposedHours=p.actualHours;
   p.syllabus=v.syllabus.map(r=>({topic:r.topic,sub:r.sub,duration:parseFloat(r.duration)||0}));
 }
-function defaultRate(){return $('#pmode').value==='perhour'?33:7500;}
+function defaultRate(){const m=$('#pmode').value;return m==='perhour'?33:m==='perstudentday'?250:m==='perstudentprog'?1500:7500;}
 function newSem(n){return {id:uid(), name:termSem()+' '+n, rate:defaultRate(), programs:[]};}
 function newBatch(n){return {id:uid(), name:'Class of '+(2027+n), students:60, semesters:[newSem(1)]};}
 
@@ -1156,9 +1166,14 @@ function semSubtotal(b,s){
   const hours=s.programs.reduce((a,p)=>a+(+p.proposedHours||0),0);
   const days=Math.round(hours/PER_DAY);
   const rate=+s.rate||0, students=+b.students||0;
-  // per-hour: students × hours × rate ; per-day: days × rate
-  const base = mode==='perhour' ? hours*rate*students : days*rate;
-  const perStudentBase = mode==='perhour' ? hours*rate : (students? base/students : 0);
+  // per-student base cost depends on the pricing model
+  let perStudentBase;
+  if(mode==='perhour')            perStudentBase = hours*rate;        // rate × training hours
+  else if(mode==='perstudentday') perStudentBase = days*rate;         // rate × training days
+  else if(mode==='perstudentprog')perStudentBase = rate;              // flat rate for the whole program/semester
+  else /* perday (per trainer/day) */ perStudentBase = 0;             // computed from cohort total below
+  const base = mode==='perday' ? days*rate : perStudentBase*students;
+  if(mode==='perday') perStudentBase = students? base/students : 0;
   return {hours,days,base,incl:base*(1+gst),perStudentBase,perStudentIncl:perStudentBase*(1+gst),rate};
 }
 function batchTotals(b){
@@ -1307,12 +1322,12 @@ function proposalFacts(){
   const college=val('college')||'your institution';
   const gst=+val('gst')||0, mode=$('#pmode').value;
   const isBoot=ptype==='bootcamp';
-  // gather programs + hours + per-student cost
+  // gather programs + hours + per-student cost (use the same engine as the proposal)
   const progSet=[]; let totalHours=0, perStudentBase=0;
   batches.forEach(b=>b.semesters.forEach(s=>{
-    const rate=+s.rate||0;
-    s.programs.forEach(p=>{const h=+p.proposedHours||0;totalHours+=h;perStudentBase+=h*rate;
+    s.programs.forEach(p=>{const h=+p.proposedHours||0;totalHours+=h;
       if(!progSet.find(x=>x.title===p.title))progSet.push({title:p.title,cat:p.cat});});
+    if(s.programs.length){ perStudentBase += semSubtotal(b,s).perStudentBase; }
   }));
   // dedupe program titles, keep order
   const names=[...new Set(batches.flatMap(b=>b.semesters.flatMap(s=>s.programs.map(p=>p.title))))];
@@ -1587,9 +1602,16 @@ function buildDoc(){
   const gProg=totals.reduce((a,x)=>a+x.t.progs,0);
   const multi=batches.length>1;
   // representative rate (first semester with programs) for the glance band
-  let repRate=mode==='perhour'?33:7500;
+  let repRate = mode==='perhour'?33 : mode==='perstudentday'?250 : mode==='perstudentprog'?1500 : 7500;
   outer: for(const b of batches) for(const s of b.semesters) if(s.programs.length){repRate=+s.rate||repRate;break outer;}
   const effRate=(repRate*(1+gst/100));
+  // pricing-model phrasing used across the document
+  const PL = ({
+    perhour:        { unit:'/hr',  glanceTag:'Per student per training hour — transparent, scalable pricing.', model:'a transparent per-student per-hour pricing model', baseDesc:'per student / per training hour', effDesc:'per student / per hour', notes:'per student per training hour', rowRate:r=>'₹ '+r, isTrainer:false },
+    perstudentday:  { unit:'/day', glanceTag:'Per student per training day — transparent, scalable pricing.', model:'a transparent per-student per-day pricing model', baseDesc:'per student / per training day', effDesc:'per student / per day', notes:'per student per training day', rowRate:r=>'₹ '+r+'/d', isTrainer:false },
+    perstudentprog: { unit:'',     glanceTag:'A flat per-student price for the full program — transparent and simple.', model:'a flat per-student price for the full program', baseDesc:'per student (flat, for the program)', effDesc:'per student (incl. GST)', notes:'per student for the program', rowRate:r=>'₹ '+r, isTrainer:false },
+    perday:         { unit:'/day', glanceTag:'Per trainer per day — transparent, scalable pricing.', model:'a per-trainer per-day pricing model', baseDesc:'per trainer / per day', effDesc:'per trainer / per day', notes:'per trainer per day', rowRate:r=>'₹ '+r+'/d', isTrainer:true },
+  })[mode] || ({ unit:'', glanceTag:'', model:'', baseDesc:'', effDesc:'', notes:'', rowRate:r=>'₹ '+r, isTrainer:false });
   const ownerNm=val('owner')||'FACE Prep — Strategic Partnerships & Alliances';
   const designation=val('designation');
   const contactBits=[val('phone'),val('email')].filter(Boolean).map(esc).join(' │ ');
@@ -1602,6 +1624,57 @@ function buildDoc(){
   const logoHtml = logoDataUrl
     ? `<img class="sx-logo" src="${logoDataUrl}" alt="FACE Prep">`
     : `<div class="sx-logo-wrap">${logoSVG()}</div>`;
+
+  /* ---- detect selected program categories/themes for tailored sections 3 & 9 ---- */
+  const allProgs = batches.flatMap(b=>b.semesters.flatMap(s=>s.programs));
+  const catSet = new Set(allProgs.map(p=>p.cat));
+  const nameBlob = allProgs.map(p=>(p.title||p.name||'').toLowerCase()).join(' | ');
+  const has = {
+    tech: catSet.has('Technology'),
+    apti: catSet.has('Aptitude'),
+    soft: catSet.has('Soft Skills'),
+    career: catSet.has('Career Planning'),
+    coding: /program|java|python|c\+\+|data structure|algorithm|oops|mern|full stack|core java|sql|mongo/.test(nameBlob),
+    cloud: /aws|cloud|mongodb|database/.test(nameBlob),
+    data: /data visualization|power bi|excel|sql|mongo/.test(nameBlob),
+    comm: /vision|writing|recruitment|interview|communication|soft/.test(nameBlob),
+    interview: /recruitment|interview|placement|vision/.test(nameBlob),
+    higherEd: /higher education|abroad/.test(nameBlob),
+  };
+
+  // Section 3 — Vision/Approach cards tailored to selected programs
+  function buildVisionCards(){
+    const c=[];
+    if(has.comm || has.soft) c.push(['Communication & Workplace Readiness','Professional communication, presentation skills and workplace etiquette built through the soft-skills modules in this plan.']);
+    if(has.apti) c.push(['Aptitude & Logical Reasoning','Quantitative aptitude and logical reasoning developed progressively through the aptitude programs selected.']);
+    if(has.coding) c.push(['Programming & Coding Proficiency','Foundational-to-advanced coding skills built systematically, aligned with product and service company expectations.']);
+    if(has.cloud) c.push(['Cloud & Database Skills','Industry-relevant cloud and database capability that maps to current hiring demand and certifications.']);
+    if(has.data) c.push(['Data & Analytics Skills','Practical data handling, querying and visualization skills that employers increasingly expect.']);
+    if(has.interview) c.push(['Placement & Interview Readiness','Group discussions, interviews and resume preparation that improve final-round conversion.']);
+    if(has.career || has.higherEd) c.push(['Career & Higher-Education Guidance','Structured direction on career paths and higher-education options, helping students make informed choices.']);
+    c.push(['Continuous Assessment & Analytics','Data-driven tracking, personalized interventions and placement-oriented learning pathways for every student.']);
+    if(c.length>4){ const last=c.pop(); const trimmed=c.slice(0,3); trimmed.push(last); return trimmed; }
+    return c;
+  }
+
+  // Section 9 — Expected Outcomes cards tailored to selected programs
+  function buildOutcomeCards(){
+    const o=[];
+    if(has.apti) o.push(['Aptitude Performance','Improved speed, accuracy and problem-solving ability across all student categories.']);
+    if(has.coding) o.push(['Coding Skills','Enhanced programming proficiency and coding confidence aligned to recruiter expectations.']);
+    if(has.cloud) o.push(['Cloud & Database Capability','Job-ready cloud and database skills that strengthen technical placement profiles.']);
+    if(has.data) o.push(['Data & Analytics','Confident data handling, querying and visualization for analytics-oriented roles.']);
+    if(has.comm || has.soft) o.push(['Communication Skills','Better workplace communication and stronger interview performance across all rounds.']);
+    if(has.interview) o.push(['Placement Readiness','Higher shortlist and interview conversion rates through recruitment-focused preparation.']);
+    if(has.career || has.higherEd) o.push(['Clearer Career Direction','Students make better-informed choices on careers and higher-education pathways.']);
+    o.push(['Learning Analytics','Early identification and improvement of weak learners through data-driven interventions.']);
+    o.push(['Institutional Impact','A scalable, measurable employability ecosystem aligned with evolving recruitment expectations.']);
+    const seen=new Set(); const out=[];
+    for(const x of o){ if(!seen.has(x[0])){seen.add(x[0]); out.push(x);} }
+    return out.slice(0,6);
+  }
+  const visionCardsDyn = buildVisionCards();
+  const outcomeCardsDyn = buildOutcomeCards();
 
   /* ---- proposal-type copy ---------------------------------------- */
   const isBoot = ptype==='bootcamp';
@@ -1654,7 +1727,7 @@ function buildDoc(){
     <div class="bc"><div class="bn">${multi?batches.length+' Cohorts':totals[0]?.b.semesters.filter(s=>s.programs.length).length+' '+T.semPlural}</div><div class="bl">${multi?'Batches covered in a single proposal.':(isBoot?'Focused, time-bound phases of intensive skilling.':'Structured, credit-linked employability training across the academic journey.')}</div></div>
     <div class="bc"><div class="bn">${gHrs} Hours</div><div class="bl">Total structured training delivered across the ${T.frameworkWord}.</div></div>
     <div class="bc"><div class="bn">${gProg} Programs</div><div class="bl">Skill ${isBoot?'modules':'interventions'} spanning aptitude, technology and soft skills.</div></div>
-    <div class="bc"><div class="bn">₹ ${repRate}${mode==='perhour'?'':'/day'} + GST</div><div class="bl">${mode==='perhour'?'Per student per training hour — transparent, scalable pricing.':'Per trainer per day — transparent, scalable pricing.'}</div></div>
+    <div class="bc"><div class="bn">₹ ${repRate}${PL.unit} + GST</div><div class="bl">${PL.glanceTag}</div></div>
   </div>`;
 
   /* ---- program flow table: one row per program + total rows ---- */
@@ -1706,16 +1779,18 @@ function buildDoc(){
       const progNames=s.programs.map(p=>p.title).join(', ');
       const label = s.programs.length===1 ? `${esc(s.name)} — ${esc(progNames)}` : `${esc(s.name)} (${esc(progNames)})`;
       const perBase = st.perStudentBase, perIncl = st.perStudentIncl;
-      return `<tr><td>${label}</td><td>${st.hours}</td><td class="r">${mode==='perhour'?'₹ '+s.rate:'₹ '+s.rate+'/d'}</td><td class="r">${fmt(perBase)}</td><td class="r"><b>${fmt(perIncl)}</b></td></tr>`;
+      return `<tr><td>${label}</td><td>${st.hours}</td><td class="r">${PL.rowRate(s.rate)}</td><td class="r">${fmt(perBase)}</td><td class="r"><b>${fmt(perIncl)}</b></td></tr>`;
     }).join('');
     const grp = multi?`<tr class="grp"><td colspan="5">${esc(b.name)} · ${b.students} students</td></tr>`:'';
     const perBaseTot = t.base/(b.students||1), perInclTot = t.incl/(b.students||1);
     const sub = `<tr class="totr"><td>${multi?esc(b.name)+' — Total per Student':'Total per Student'}</td><td>${t.hours}</td><td class="r">—</td><td class="r">${fmt(perBaseTot)}</td><td class="r">${fmt(perInclTot)}</td></tr>`;
     return grp+semRows+sub;
   }).join('');
-  const formula = mode==='perhour'
-    ? `Cost per Student = Number of Training Hours × ₹ ${repRate} + ${gst}% GST`
-    : `Total Cost = Number of Training Days × ₹ ${repRate} per trainer + ${gst}% GST`;
+  const formula =
+    mode==='perhour'         ? `Cost per Student = Number of Training Hours × ₹ ${repRate} + ${gst}% GST` :
+    mode==='perstudentday'   ? `Cost per Student = Number of Training Days × ₹ ${repRate} + ${gst}% GST` :
+    mode==='perstudentprog'  ? `Cost per Student = ₹ ${repRate} flat for the program + ${gst}% GST` :
+                               `Total Cost = Number of Training Days × ₹ ${repRate} per trainer + ${gst}% GST`;
 
   $('#docMount').innerHTML=`<div class="page sx">
     <!-- COVER -->
@@ -1764,7 +1839,7 @@ function buildDoc(){
       <div class="sec"><div class="sec-h"><span class="no">3</span><h2>${T.visionTitle}</h2></div>
         <p>${T.visionLead}</p>
         <div class="sx-quad">
-          ${T.visionCards.map(c=>`<div class="qc"><h4>${c[0]}</h4><p>${c[1]}</p></div>`).join('')}
+          ${visionCardsDyn.map(c=>`<div class="qc"><h4>${c[0]}</h4><p>${c[1]}</p></div>`).join('')}
         </div>
       </div>
 
@@ -1783,11 +1858,11 @@ function buildDoc(){
 
       <!-- 6 COMMERCIAL -->
       <div class="sec"><div class="sec-h"><span class="no">6</span><h2>Commercial Proposal</h2></div>
-        <p>The ${T.frameworkWord} is offered on ${mode==='perhour'?'a transparent per-student per-hour pricing model':'a per-trainer per-day pricing model'} — enabling ${esc(college)} to scale ${multi?'across cohorts, batches and ':'across batches, '}departments with complete clarity on costs.</p>
+        <p>The ${T.frameworkWord} is offered on ${PL.model} — enabling ${esc(college)} to scale ${multi?'across cohorts, batches and ':'across batches, '}departments with complete clarity on costs.</p>
         <div class="sx-band b3 price">
-          <div class="bc"><div class="bn">₹ ${repRate}</div><div class="bt">Base Rate</div><div class="bl">${mode==='perhour'?'per student / per training hour':'per trainer / per day'}</div></div>
+          <div class="bc"><div class="bn">₹ ${repRate}</div><div class="bt">Base Rate</div><div class="bl">${PL.baseDesc}</div></div>
           <div class="bc"><div class="bn">${gst}%</div><div class="bt">GST</div><div class="bl">applicable on base rate</div></div>
-          <div class="bc"><div class="bn">₹ ${effRate.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="bt">Effective Rate</div><div class="bl">${mode==='perhour'?'per student / per hour':'per trainer / per day'} (incl. GST)</div></div>
+          <div class="bc"><div class="bn">₹ ${effRate.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="bt">Effective Rate</div><div class="bl">${PL.effDesc} (incl. GST)</div></div>
         </div>
         <h3 class="sx-bh" style="margin-top:22px">${T.costHeader}</h3>
         <table class="tbl"><thead><tr><th>${T.costCol}</th><th>Hours</th><th class="r">Rate</th><th class="r">Base Cost (₹)</th><th class="r">Incl. GST (₹)</th></tr></thead>
@@ -1810,7 +1885,7 @@ function buildDoc(){
       <!-- 8 PRICING NOTES -->
       <div class="sec"><div class="sec-h"><span class="no">8</span><h2>Pricing Notes</h2></div>
         <div class="notes-grid">
-          <div class="nr"><div class="nk">Pricing Model</div><div class="nv">₹ ${repRate} ${mode==='perhour'?'per student per training hour':'per trainer per day'}, plus ${gst}% GST. Effective ₹ ${effRate.toLocaleString('en-IN',{maximumFractionDigits:2})} inclusive of taxes.${multi?' Rates set per semester within each cohort.':''}</div></div>
+          <div class="nr"><div class="nk">Pricing Model</div><div class="nv">₹ ${repRate} ${PL.notes}, plus ${gst}% GST. Effective ₹ ${effRate.toLocaleString('en-IN',{maximumFractionDigits:2})} inclusive of taxes.${multi?' Rates set per '+T.semWord.toLowerCase()+' within each cohort.':''}</div></div>
           <div class="nr"><div class="nk">Batch Composition</div><div class="nv">Indicative batch sizes shown for reference. Final invoicing based on actual enrolled student strength.</div></div>
           <div class="nr"><div class="nk">Optimal Batch Size</div><div class="nv">60 to 70 students per batch for optimal interaction. Larger cohorts can be split into parallel sections.</div></div>
           <div class="nr"><div class="nk">Mode of Delivery</div><div class="nv">On-campus instructor-led training. Assessments conducted through FACE Prep's proctored online platform.</div></div>
@@ -1827,12 +1902,7 @@ function buildDoc(){
       <div class="sec"><div class="sec-h"><span class="no">9</span><h2>Expected Outcomes</h2></div>
         <p>${isBoot?`This bootcamp is positioned as an intensive, outcome-first skilling sprint — combining hands-on training, assessments, analytics and personalized interventions to deliver measurable capability gains for every participant at ${esc(college)}.`:`This engagement is positioned as a long-term employability transformation framework — integrating skill development, assessments, analytics, personalized interventions, and placement readiness into ${esc(college)}'s regular academic journey.`}</p>
         <div class="sx-quad out">
-          <div class="qc"><h4>Aptitude Performance</h4><p>Improved speed, accuracy, and problem-solving ability across all student categories.</p></div>
-          <div class="qc"><h4>Coding Skills</h4><p>Enhanced programming proficiency and coding confidence aligned to recruiter expectations.</p></div>
-          <div class="qc"><h4>Communication Skills</h4><p>Better workplace communication and stronger interview performance across all rounds.</p></div>
-          <div class="qc"><h4>Placement Readiness</h4><p>Higher shortlist and interview conversion rates through recruitment-focused preparation.</p></div>
-          <div class="qc"><h4>Learning Analytics</h4><p>Early identification and improvement of weak learners through data-driven interventions.</p></div>
-          <div class="qc"><h4>Institutional Impact</h4><p>A scalable, measurable employability ecosystem aligned with evolving recruitment expectations.</p></div>
+          ${outcomeCardsDyn.map(c=>`<div class="qc"><h4>${c[0]}</h4><p>${c[1]}</p></div>`).join('')}
         </div>
       </div>
 
