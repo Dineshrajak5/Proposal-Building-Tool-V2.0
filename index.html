@@ -656,8 +656,12 @@ body.text-edit .blk-hl:hover>.blk-tools{display:inline-flex}
               </div>
             </div>
             <div class="row2">
-              <label class="fld"><span class="lab" id="collegeLab">College / Institution</span><input class="inp" id="college" placeholder="e.g. Jeppiaar University & Engineering College"></label>
-              <label class="fld"><span class="lab">City / Location</span><input class="inp" id="city" placeholder="e.g. Chennai"></label>
+              <label class="fld"><span class="lab" id="collegeLab">College / Institution</span>
+                <input class="inp" id="collegeSearch" list="crmCollegeList" placeholder="Start typing to search your CRM accounts…" autocomplete="off">
+                <datalist id="crmCollegeList"></datalist>
+                <input type="hidden" id="college">
+              </label>
+              <label class="fld"><span class="lab">City / Location</span><input class="inp" id="city" placeholder="Auto-filled from the CRM account"></label>
             </div>
             <div class="row1">
               <label class="fld"><span class="lab">Proposal title <span class="lab-opt">(optional — overrides the cover heading)</span></span><input class="inp" id="ptitle" placeholder="e.g. Placement Readiness Bootcamp 2026"></label>
@@ -856,6 +860,43 @@ function logoSVG(){
 const ACCESS_CODE='faceprep2026'; // shared team code — change as needed
 const AUTH_KEY='faceprep_auth_v1';
 
+/* ===== CRM session bridge + Supabase config (moved up so the auth gate can read it) ===== */
+/* ---------- Supabase config — FACE Prep CRM project (shared) ---------- */
+const SUPA_URL = 'https://mtkecywpjgrudufxstud.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a2VjeXdwamdydWR1ZnhzdHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NDM4MDMsImV4cCI6MjA5NTUxOTgwM30.U7KzGTKYF_3PsTEuqdImBzgC6ffyTf_eGy2ua18fyY0';
+
+/* ---------- Session bridge (passed in from the CRM) ----------
+   The CRM opens this Studio embedded and hands over the signed-in user's
+   Supabase session via the URL hash (#fp_session=<access>|<refresh>).
+   We use that JWT for every Supabase call, so proposals are written as the
+   real authenticated user (created_by = verified email). No session = blocked. */
+let FP_ACCESS = null, FP_REFRESH = null, FP_EMAIL = '', FP_NAME = '', FP_ACCOUNT = '';
+(function readSession(){
+  try{
+    const h = location.hash || '';
+    const m = h.match(/fp_session=([^&]+)/);
+    if(m){
+      const parts = decodeURIComponent(m[1]).split('|');
+      FP_ACCESS = parts[0] || null;
+      FP_REFRESH = parts[1] || null;
+      // wipe the token from the visible URL immediately (don't leave it in the address bar / history)
+      try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+    }
+    // optional ?account=<id> to pre-select a CRM college
+    const q = new URLSearchParams(location.search);
+    FP_ACCOUNT = q.get('account') || '';
+    // decode email/name from the JWT payload (no verification needed client-side; the server verifies)
+    if(FP_ACCESS){
+      const payload = JSON.parse(atob(FP_ACCESS.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+      FP_EMAIL = (payload.email || '').toLowerCase();
+      FP_NAME  = (payload.user_metadata && (payload.user_metadata.full_name || payload.user_metadata.name)) || FP_EMAIL.split('@')[0] || '';
+    }
+  }catch(e){ console.warn('session parse failed', e); }
+})();
+function fpAuthed(){ return !!FP_ACCESS; }
+function sbHeaders(extra){ return Object.assign({ apikey: SUPA_ANON, Authorization:`Bearer ${FP_ACCESS||SUPA_ANON}`, 'Content-Type':'application/json' }, extra||{}); }
+
+
 // screen states: 'login' | 'welcome' | 'choice' | 'app'
 function setScreen(s){
   document.body.classList.toggle('authed', s==='app');
@@ -867,6 +908,22 @@ function setScreen(s){
 function doSignOut(forget){
   if(forget!==false){try{localStorage.removeItem(AUTH_KEY);}catch(e){}}
   $('#loginPass').value=''; setScreen('login');
+}
+// Shown when the Studio is opened directly (no CRM session) — it must run inside the CRM.
+function showStandaloneBlock(){
+  document.body.classList.remove('authed');
+  ['#welcomeScreen','#choiceScreen'].forEach(s=>{ const el=$(s); if(el) el.style.display='none'; });
+  const gate = $('#loginGate');
+  if(gate){
+    gate.style.display='flex';
+    gate.innerHTML =
+      '<div style="max-width:440px;margin:auto;text-align:center;padding:40px 28px;background:#fff;border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.12)">'
+      + '<div id="blockLogo" style="margin-bottom:18px"></div>'
+      + '<h2 style="font-size:20px;margin-bottom:10px;color:#1a1a1a">Open from the FACE Prep CRM</h2>'
+      + '<p style="font-size:14px;line-height:1.6;color:#666">Proposal Studio now runs inside the CRM. Please open it from the <strong>Proposals</strong> page in the FACE Prep CRM so your work is saved to your account.</p>'
+      + '</div>';
+    try{ $('#blockLogo').innerHTML = logoSVG(); }catch(e){}
+  }
 }
 async function refreshChoiceCount(){
   try{
@@ -886,11 +943,14 @@ async function refreshChoiceCount(){
 
   // restore saved session
   let saved=null; try{saved=JSON.parse(localStorage.getItem(AUTH_KEY)||'null');}catch(e){}
-  if(saved && saved.email){
-    if(!$('#email').value) $('#email').value=saved.email;
-    setScreen('welcome');           // already signed in → skip straight to welcome
+  if(fpAuthed()){
+    // Opened from the CRM with a valid session → skip the login entirely.
+    if(FP_EMAIL && !$('#email').value) $('#email').value = FP_EMAIL;
+    setScreen('welcome');
+    initCrmColleges();
   } else {
-    setScreen('login');
+    // No CRM session → this Studio must be opened from inside the FACE Prep CRM.
+    showStandaloneBlock();
   }
 
   const tryLogin=()=>{
@@ -904,8 +964,8 @@ async function refreshChoiceCount(){
     if(!$('#email').value) $('#email').value=email;
     setScreen('welcome');
   };
-  $('#loginBtn').onclick=tryLogin;
-  [$('#loginEmail'),$('#loginPass')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();}));
+  if($('#loginBtn')) $('#loginBtn').onclick=tryLogin;
+  [$('#loginEmail'),$('#loginPass')].forEach(el=>{ if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();}); });
 
   // welcome → choice
   $('#launchBtn').onclick=()=>setScreen('choice');
@@ -922,6 +982,42 @@ async function refreshChoiceCount(){
 })();
 
 // start a fresh proposal (reset builder to a clean single batch)
+// ---- CRM college picker: load institutions, fill datalist, map selection -> id+city ----
+window.FP_SELECTED_INST_ID = '';
+let _crmColleges = [];
+async function initCrmColleges(){
+  if(_crmColleges.length) { return; }
+  _crmColleges = await loadInstitutions();
+  const dl = document.getElementById('crmCollegeList');
+  if(dl){
+    dl.innerHTML = _crmColleges.map(i=>`<option value="${(i.name||'').replace(/"/g,'&quot;')}"></option>`).join('');
+  }
+  const search = document.getElementById('collegeSearch');
+  if(search){
+    const applyPick = ()=>{
+      const typed = (search.value||'').trim();
+      const hit = _crmColleges.find(i=>(i.name||'').toLowerCase() === typed.toLowerCase());
+      if(hit){
+        window.FP_SELECTED_INST_ID = hit.id || '';
+        const coll = document.getElementById('college'); if(coll) coll.value = hit.name || '';
+        const city = document.getElementById('city'); if(city && (hit.city||hit.location)) city.value = hit.city || hit.location || '';
+        const ownerEl = document.getElementById('owner');
+        if(ownerEl && !ownerEl.value && hit.ownerName) ownerEl.value = hit.ownerName;
+        search.style.borderColor = '';
+      } else {
+        window.FP_SELECTED_INST_ID = '';
+        const coll = document.getElementById('college'); if(coll) coll.value = '';
+        if(typed) search.style.borderColor = '#e06666';
+      }
+    };
+    search.addEventListener('change', applyPick);
+    search.addEventListener('blur', applyPick);
+  }
+  if(FP_ACCOUNT){
+    const pre = _crmColleges.find(i=>String(i.id)===String(FP_ACCOUNT));
+    if(pre && search){ search.value = pre.name||''; search.dispatchEvent(new Event('change')); }
+  }
+}
 function startNewProposal(){
   batches=[newBatch(0)];
   // ensure we're on the configure stage, not a stale generated doc
@@ -2059,16 +2155,13 @@ function buildDoc(){
 }
 
 
-/* ---------- Supabase config — replace with your project values ---------- */
-const SUPA_URL = 'https://aeucrtchaoewwpphtjyb.supabase.co';
-const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldWNydGNoYW9ld3dwcGh0anliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNDUyNzgsImV4cCI6MjA5NjgyMTI3OH0.DblVHul6V38bREwDU7vg_VB5Z8ILgZhc8qYkhOnXUpY';
 
-/* ---------- Supabase REST helpers ---------- */
+/* ---------- Supabase REST helpers (use the CRM-passed JWT) ---------- */
 async function sbGet(table, orderBy='saved_at', ascending=false){
   const dir = ascending ? 'asc' : 'desc';
   const res = await fetch(
-    `${SUPA_URL}/rest/v1/${table}?order=${orderBy}.${dir}&limit=50`,
-    { headers:{ apikey: SUPA_ANON, Authorization:`Bearer ${SUPA_ANON}`, 'Content-Type':'application/json' } }
+    `${SUPA_URL}/rest/v1/${table}?order=${orderBy}.${dir}&limit=200`,
+    { headers: sbHeaders() }
   );
   if(!res.ok) throw new Error(`Supabase GET ${table}: ${res.status}`);
   return res.json();
@@ -2076,8 +2169,7 @@ async function sbGet(table, orderBy='saved_at', ascending=false){
 async function sbUpsert(table, row){
   const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
     method: 'POST',
-    headers:{ apikey: SUPA_ANON, Authorization:`Bearer ${SUPA_ANON}`,
-              'Content-Type':'application/json', Prefer:'resolution=merge-duplicates,return=minimal' },
+    headers: sbHeaders({ Prefer:'resolution=merge-duplicates,return=minimal' }),
     body: JSON.stringify(row)
   });
   if(!res.ok){ const t=await res.text(); throw new Error(`Supabase upsert ${table}: ${res.status} ${t}`); }
@@ -2085,9 +2177,23 @@ async function sbUpsert(table, row){
 async function sbDelete(table, id){
   const res = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    headers:{ apikey: SUPA_ANON, Authorization:`Bearer ${SUPA_ANON}` }
+    headers: sbHeaders()
   });
   if(!res.ok) throw new Error(`Supabase DELETE ${table}: ${res.status}`);
+}
+
+/* ---------- CRM college list (read the CRM's per-row institutions table) ---------- */
+let _instCache = null;
+async function loadInstitutions(){
+  if(_instCache) return _instCache;
+  try{
+    const res = await fetch(`${SUPA_URL}/rest/v1/institutions?select=data`, { headers: sbHeaders() });
+    if(!res.ok) throw new Error('institutions '+res.status);
+    const rows = await res.json();
+    _instCache = rows.map(r=>r.data).filter(Boolean)
+      .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    return _instCache;
+  }catch(e){ console.error('loadInstitutions', e); return []; }
 }
 
 /* ---------- In-memory caches (so the UI stays snappy) ---------- */
@@ -2103,8 +2209,11 @@ async function loadSaved(){
 }
 async function writeSaved(snap){
   try{
-    const row = { id:snap.id, name:snap.name, college:snap.college||'', ptype:snap.ptype||'semester',
-                  saved_at:snap.savedAt, created_by:snap.createdBy||'', payload:snap };
+    const row = { id:snap.id, name:snap.name, college:snap.college||'',
+                  institution_id:snap.institutionId||'', ptype:snap.ptype||'semester',
+                  total_value:snap.totalValue||0, status:snap.status||'draft',
+                  saved_at:snap.savedAt, created_by:(FP_EMAIL||snap.createdBy||''),
+                  owner_name:(FP_NAME||''), payload:snap };
     await sbUpsert('proposals', row);
     _savedCache = null; // invalidate cache
   }catch(e){ alert('Could not save to Supabase: '+e.message); }
@@ -2120,9 +2229,11 @@ async function loadGenerated(){
 }
 async function writeGenerated(snap){
   try{
-    const row = { id:snap.id, name:snap.name, college:snap.college||'', ptype:snap.ptype||'semester',
+    const row = { id:snap.id, name:snap.name, college:snap.college||'',
+                  institution_id:snap.institutionId||'', ptype:snap.ptype||'semester',
+                  total_value:snap.totalValue||0,
                   saved_at:snap.savedAt||snap.generatedAt, generated_at:snap.generatedAt||Date.now(),
-                  created_by:snap.createdBy||'', payload:snap };
+                  created_by:(FP_EMAIL||snap.createdBy||''), owner_name:(FP_NAME||''), payload:snap };
     await sbUpsert('generated_proposals', row);
     _genCache = null;
   }catch(e){ console.error('Could not save generated proposal:', e); }
@@ -2140,8 +2251,11 @@ async function autoSaveGenerated(){
   refreshChoiceCount();
 }
 function snapshot(){
+  // grand total incl GST, parsed from the live summary (strip ₹ and commas)
+  let _tv = 0; try{ _tv = parseFloat(($('#tTot')?.textContent||'0').replace(/[^0-9.]/g,''))||0; }catch(e){}
   return {
     v:1, savedAt:Date.now(),
+    institutionId: (window.FP_SELECTED_INST_ID||''), totalValue:_tv,
     college:val('college'),city:val('city'),ptitle:val('ptitle'),owner:val('owner'),designation:val('designation'),
     email:val('email'),phone:val('phone'),pmode:$('#pmode').value,gst:val('gst'),validity:val('validity'),
     ptype, logoDataUrl, payments:JSON.parse(JSON.stringify(payments)),
@@ -2150,6 +2264,9 @@ function snapshot(){
 }
 function applySnapshot(s){
   $('#college').value=s.college||'';$('#city').value=s.city||'';$('#ptitle')&&($('#ptitle').value=s.ptitle||'');
+  // reflect the CRM college link in the searchable picker + hidden id
+  window.FP_SELECTED_INST_ID = s.institutionId||'';
+  const _cs=document.getElementById('collegeSearch'); if(_cs) _cs.value = s.college||'';
   $('#owner').value=s.owner||'';$('#designation').value=s.designation||'';
   $('#email').value=s.email||'';$('#phone').value=s.phone||'';
   $('#pmode').value=s.pmode||'perhour';$('#gst').value=s.gst||'18';$('#validity').value=s.validity||'60';
