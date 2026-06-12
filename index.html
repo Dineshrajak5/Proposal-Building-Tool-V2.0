@@ -992,6 +992,11 @@ async function initCrmColleges(){
   if(dl){
     dl.innerHTML = _crmColleges.map(i=>`<option value="${(i.name||'').replace(/"/g,'&quot;')}"></option>`).join('');
   }
+  const searchEl = document.getElementById('collegeSearch');
+  if(searchEl){
+    if(_crmColleges.length){ searchEl.placeholder = `Search ${_crmColleges.length} CRM accounts…`; }
+    else { searchEl.placeholder = window.__FP_INST_ERR ? ('Could not load: '+window.__FP_INST_ERR).slice(0,90) : 'No CRM accounts found'; }
+  }
   const search = document.getElementById('collegeSearch');
   if(search){
     const applyPick = ()=>{
@@ -1019,6 +1024,7 @@ async function initCrmColleges(){
   }
 }
 function startNewProposal(){
+  initCrmColleges();
   batches=[newBatch(0)];
   // ensure we're on the configure stage, not a stale generated doc
   $('#docStage').classList.remove('show');
@@ -2187,13 +2193,36 @@ let _instCache = null;
 async function loadInstitutions(){
   if(_instCache) return _instCache;
   try{
-    const res = await fetch(`${SUPA_URL}/rest/v1/institutions?select=data`, { headers: sbHeaders() });
-    if(!res.ok) throw new Error('institutions '+res.status);
-    const rows = await res.json();
-    _instCache = rows.map(r=>r.data).filter(Boolean)
-      .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    const url = `${SUPA_URL}/rest/v1/institutions?select=data`;
+    console.log('[Studio] loading institutions from', url, 'authed:', fpAuthed());
+    const res = await fetch(url, { headers: sbHeaders() });
+    console.log('[Studio] institutions HTTP', res.status);
+    let parsed = [];
+    if(res.ok){
+      const rows = await res.json();
+      console.log('[Studio] per-row institutions:', rows.length);
+      parsed = rows.map(r=>r.data).filter(Boolean);
+    } else {
+      const t=await res.text(); console.warn('[Studio] per-row read failed:', res.status, t);
+    }
+    // Fallback: if the per-row table is empty, read the CRM blob (crm_store / crm_institutions) — same dual-mode the CRM uses.
+    if(!parsed.length){
+      try{
+        const burl = `${SUPA_URL}/rest/v1/crm_store?key=eq.crm_institutions&select=value`;
+        console.log('[Studio] falling back to blob', burl);
+        const bres = await fetch(burl, { headers: sbHeaders() });
+        console.log('[Studio] blob HTTP', bres.status);
+        if(bres.ok){
+          const brows = await bres.json();
+          if(brows.length){ const v=JSON.parse(brows[0].value); if(Array.isArray(v)) parsed = v.filter(Boolean); }
+          console.log('[Studio] blob institutions:', parsed.length);
+        }
+      }catch(be){ console.warn('[Studio] blob fallback failed', be); }
+    }
+    _instCache = parsed.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    console.log('[Studio] final colleges:', _instCache.length, _instCache.slice(0,3).map(i=>i.name));
     return _instCache;
-  }catch(e){ console.error('loadInstitutions', e); return []; }
+  }catch(e){ console.error('[Studio] loadInstitutions failed', e); window.__FP_INST_ERR = String(e.message||e); return []; }
 }
 
 /* ---------- In-memory caches (so the UI stays snappy) ---------- */
