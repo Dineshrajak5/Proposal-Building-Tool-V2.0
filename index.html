@@ -868,10 +868,12 @@ function doSignOut(forget){
   if(forget!==false){try{localStorage.removeItem(AUTH_KEY);}catch(e){}}
   $('#loginPass').value=''; setScreen('login');
 }
-function refreshChoiceCount(){
+async function refreshChoiceCount(){
   try{
-    const n=loadSaved().length; const sc=$('#choiceSavedCount'); if(sc) sc.textContent=n? n+' saved':'None yet';
-    const g=loadGenerated().length; const gc=$('#choiceGenCount'); if(gc) gc.textContent=g? g+' generated':'None yet';
+    const saved = await loadSaved();
+    const sc=$('#choiceSavedCount'); if(sc) sc.textContent=saved.length? saved.length+' saved':'None yet';
+    const gen = await loadGenerated();
+    const gc=$('#choiceGenCount'); if(gc) gc.textContent=gen.length? gen.length+' generated':'None yet';
   }catch(e){}
 }
 
@@ -2057,31 +2059,84 @@ function buildDoc(){
 }
 
 
-/* ---------- save / recall proposals (localStorage) ---------- */
-const STORE_KEY='faceprep_saved_proposals_v1';
-const GEN_STORE_KEY='faceprep_generated_proposals_v1';
-function storageOK(){try{const k='__t';localStorage.setItem(k,'1');localStorage.removeItem(k);return true;}catch(e){return false;}}
-function loadSaved(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch(e){return [];}}
-function writeSaved(arr){try{localStorage.setItem(STORE_KEY,JSON.stringify(arr));}catch(e){alert('Could not save — browser storage is full or blocked.');}}
-function loadGenerated(){try{return JSON.parse(localStorage.getItem(GEN_STORE_KEY)||'[]');}catch(e){return [];}}
-function writeGenerated(arr){try{localStorage.setItem(GEN_STORE_KEY,JSON.stringify(arr));}catch(e){}}
-function autoSaveGenerated(){
-  // auto-store the current proposal in the "Previously Generated" list on download
-  if(!storageOK()) return;
+/* ---------- Supabase config — replace with your project values ---------- */
+const SUPA_URL = 'https://aeucrtchaoewwpphtjyb.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldWNydGNoYW9ld3dwcGh0anliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNDUyNzgsImV4cCI6MjA5NjgyMTI3OH0.DblVHul6V38bREwDU7vg_VB5Z8ILgZhc8qYkhOnXUpY';
+
+/* ---------- Supabase REST helpers ---------- */
+async function sbGet(table, orderBy='saved_at', ascending=false){
+  const dir = ascending ? 'asc' : 'desc';
+  const res = await fetch(
+    `${SUPA_URL}/rest/v1/${table}?order=${orderBy}.${dir}&limit=50`,
+    { headers:{ apikey: SUPA_ANON, Authorization:`Bearer ${SUPA_ANON}`, 'Content-Type':'application/json' } }
+  );
+  if(!res.ok) throw new Error(`Supabase GET ${table}: ${res.status}`);
+  return res.json();
+}
+async function sbUpsert(table, row){
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers:{ apikey: SUPA_ANON, Authorization:`Bearer ${SUPA_ANON}`,
+              'Content-Type':'application/json', Prefer:'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(row)
+  });
+  if(!res.ok){ const t=await res.text(); throw new Error(`Supabase upsert ${table}: ${res.status} ${t}`); }
+}
+async function sbDelete(table, id){
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers:{ apikey: SUPA_ANON, Authorization:`Bearer ${SUPA_ANON}` }
+  });
+  if(!res.ok) throw new Error(`Supabase DELETE ${table}: ${res.status}`);
+}
+
+/* ---------- In-memory caches (so the UI stays snappy) ---------- */
+let _savedCache = null;
+let _genCache   = null;
+
+/* ---------- save / recall proposals (Supabase) ---------- */
+function storageOK(){ return SUPA_URL !== 'YOUR_SUPABASE_URL'; }
+async function loadSaved(){
+  if(_savedCache) return _savedCache;
+  try{ _savedCache = await sbGet('proposals'); return _savedCache; }
+  catch(e){ console.error(e); return []; }
+}
+async function writeSaved(snap){
+  try{
+    const row = { id:snap.id, name:snap.name, college:snap.college||'', ptype:snap.ptype||'semester',
+                  saved_at:snap.savedAt, created_by:snap.createdBy||'', payload:snap };
+    await sbUpsert('proposals', row);
+    _savedCache = null; // invalidate cache
+  }catch(e){ alert('Could not save to Supabase: '+e.message); }
+}
+async function deleteSaved(id){
+  try{ await sbDelete('proposals', id); _savedCache = null; }
+  catch(e){ alert('Could not delete: '+e.message); }
+}
+async function loadGenerated(){
+  if(_genCache) return _genCache;
+  try{ _genCache = await sbGet('generated_proposals','saved_at',false); return _genCache; }
+  catch(e){ console.error(e); return []; }
+}
+async function writeGenerated(snap){
+  try{
+    const row = { id:snap.id, name:snap.name, college:snap.college||'', ptype:snap.ptype||'semester',
+                  saved_at:snap.savedAt||snap.generatedAt, generated_at:snap.generatedAt||Date.now(),
+                  created_by:snap.createdBy||'', payload:snap };
+    await sbUpsert('generated_proposals', row);
+    _genCache = null;
+  }catch(e){ console.error('Could not save generated proposal:', e); }
+}
+async function deleteGenerated(id){
+  try{ await sbDelete('generated_proposals', id); _genCache = null; }
+  catch(e){ alert('Could not delete: '+e.message); }
+}
+async function autoSaveGenerated(){
+  if(!storageOK()){ console.warn('Supabase not configured — set SUPA_URL and SUPA_ANON in index.html'); return; }
   if(!val('college') && !batches.length) return;
-  const arr=loadGenerated();
   const snap=snapshot(); snap.name=defaultName(); snap.id=uid(); snap.generatedAt=Date.now();
-  // avoid duplicate spam: if an identical college+ptype+hours was saved in the last 60s, replace it
-  const sig=snap.college+'|'+snap.ptype+'|'+JSON.stringify(snap.batches).length;
-  const recent=arr[0];
-  if(recent && (Date.now()-recent.savedAt<60000) && (recent.college+'|'+recent.ptype+'|'+JSON.stringify(recent.batches).length)===sig){
-    arr[0]=snap; // refresh the very recent one instead of adding a near-duplicate
-  } else {
-    arr.unshift(snap);
-  }
-  // cap the history at 50 entries
-  if(arr.length>50) arr.length=50;
-  writeGenerated(arr);
+  snap.createdBy = $('#email').value||'';
+  await writeGenerated(snap);
   refreshChoiceCount();
 }
 function snapshot(){
@@ -2110,74 +2165,95 @@ function applySnapshot(s){
   renderPay();render();
 }
 function defaultName(){const c=val('college')||'Untitled';return c+' · '+(ptype==='bootcamp'?'Bootcamp':'Semester')+' · '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'});}
-function refreshSaveCount(){const n=loadSaved().length;$('#saveCount').textContent=n?'('+n+')':'';}
-function saveCurrent(btnId){
-  if(!storageOK()){alert('Saving needs browser storage, which is unavailable here. Once hosted (e.g. on Vercel) saving will work normally.');return;}
+async function refreshSaveCount(){
+  const saved = await loadSaved();
+  const n = saved.length;
+  $('#saveCount').textContent=n?'('+n+')':'';
+}
+async function saveCurrent(btnId){
+  if(!storageOK()){alert('Supabase is not configured. Set SUPA_URL and SUPA_ANON in index.html before deploying.');return;}
   if(!val('college') && !batches.length){alert('Add some details first.');return;}
   const name=prompt('Save this proposal as:', defaultName());
   if(name===null) return;
-  const arr=loadSaved();
-  const snap=snapshot(); snap.name=name.trim()||defaultName(); snap.id=uid();
-  arr.unshift(snap); writeSaved(arr); refreshSaveCount();
+  const snap=snapshot();
+  snap.name=name.trim()||defaultName();
+  snap.id=uid();
+  snap.createdBy=$('#email').value||'';
+  await writeSaved(snap);
+  await refreshSaveCount();
   const btn=$('#'+btnId); if(btn){const old=btn.innerHTML; btn.innerHTML='✓ Saved'; setTimeout(()=>btn.innerHTML=old,1300);}
 }
 $('#saveBtn').onclick=()=>saveCurrent('saveBtn');
 $('#saveDocBtn') && ($('#saveDocBtn').onclick=()=>saveCurrent('saveDocBtn'));
-function renderSavedList(){
-  const host=$('#savedList'); const arr=loadSaved();
+async function renderSavedList(){
+  const host=$('#savedList');
+  host.innerHTML='<div class="empty-hint" style="opacity:.5">Loading…</div>';
+  const arr = await loadSaved();
   if(!arr.length){host.innerHTML='<div class="empty-hint">No saved proposals yet.</div>';return;}
   host.innerHTML='';
   arr.forEach(s=>{
-    const when=new Date(s.savedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    const nB=(s.batches||[]).length, nP=(s.batches||[]).reduce((a,b)=>a+(b.semesters||[]).reduce((x,sm)=>x+(sm.programs||[]).length,0),0);
+    const payload = s.payload || s; // Supabase rows have payload column; local snapshots are flat
+    const when=new Date(s.saved_at||payload.savedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const nB=(payload.batches||[]).length, nP=(payload.batches||[]).reduce((a,b)=>a+(b.semesters||[]).reduce((x,sm)=>x+(sm.programs||[]).length,0),0);
     const row=document.createElement('div'); row.className='saved-item';
-    row.innerHTML=`<div class="si-main"><div class="si-name">${esc(s.name||'Untitled')}</div>
-        <div class="si-meta">${esc(s.college||'—')} · ${nB} batch${nB!==1?'es':''} · ${nP} program${nP!==1?'s':''} · ${s.ptype==='bootcamp'?'Bootcamp':'Semester'}<br><span class="si-when">Saved ${when}</span></div></div>
+    row.innerHTML=`<div class="si-main"><div class="si-name">${esc(s.name||payload.name||'Untitled')}</div>
+        <div class="si-meta">${esc(s.college||payload.college||'—')} · ${nB} batch${nB!==1?'es':''} · ${nP} program${nP!==1?'s':''} · ${(s.ptype||payload.ptype)==='bootcamp'?'Bootcamp':'Semester'}<br><span class="si-when">Saved ${when}</span></div></div>
       <div class="si-actions"><button class="btn btn-primary btn-sm" data-load="${s.id}">Open</button><button class="si-del" data-del="${s.id}" title="Delete">🗑</button></div>`;
     host.appendChild(row);
   });
-  host.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>{
-    const s=loadSaved().find(x=>x.id===b.dataset.load); if(s){applySnapshot(s);closeDrawer();}
+  host.querySelectorAll('[data-load]').forEach(b=>b.onclick=async()=>{
+    const all = await loadSaved();
+    const row = all.find(x=>x.id===b.dataset.load);
+    if(row){ applySnapshot(row.payload||row); closeDrawer(); }
   });
-  host.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+  host.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
     if(!confirm('Delete this saved proposal?'))return;
-    writeSaved(loadSaved().filter(x=>x.id!==b.dataset.del)); renderSavedList(); refreshSaveCount();
+    await deleteSaved(b.dataset.del);
+    await renderSavedList();
+    await refreshSaveCount();
   });
 }
-function openDrawer(){renderSavedList();$('#savedDrawer').classList.add('show');}
+async function openDrawer(){await renderSavedList();$('#savedDrawer').classList.add('show');}
 function closeDrawer(){$('#savedDrawer').classList.remove('show');}
 $('#openBtn').onclick=openDrawer;
 $('#savedClose').onclick=closeDrawer;
 $('#savedDrawer').onclick=e=>{if(e.target.id==='savedDrawer')closeDrawer();};
 
 /* ----- previously generated drawer ----- */
-function renderGenList(){
-  const host=$('#genList'); const arr=loadGenerated();
+async function renderGenList(){
+  const host=$('#genList');
+  host.innerHTML='<div class="empty-hint" style="opacity:.5">Loading…</div>';
+  const arr = await loadGenerated();
   if(!arr.length){host.innerHTML='<div class="empty-hint">No generated proposals yet. Download a PDF and it will be auto-saved here.</div>';return;}
   host.innerHTML='';
   arr.forEach(s=>{
-    const when=new Date(s.generatedAt||s.savedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    const nB=(s.batches||[]).length, nP=(s.batches||[]).reduce((a,b)=>a+(b.semesters||[]).reduce((x,sm)=>x+(sm.programs||[]).length,0),0);
+    const payload = s.payload || s;
+    const when=new Date(s.generated_at||s.saved_at||payload.generatedAt||payload.savedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const nB=(payload.batches||[]).length, nP=(payload.batches||[]).reduce((a,b)=>a+(b.semesters||[]).reduce((x,sm)=>x+(sm.programs||[]).length,0),0);
     const row=document.createElement('div'); row.className='saved-item';
-    row.innerHTML=`<div class="si-main"><div class="si-name">${esc(s.name||'Untitled')}</div>
-        <div class="si-meta">${esc(s.college||'—')} · ${nB} batch${nB!==1?'es':''} · ${nP} program${nP!==1?'s':''} · ${s.ptype==='bootcamp'?'Bootcamp':'Semester'}<br><span class="si-when">Generated ${when}</span></div></div>
+    row.innerHTML=`<div class="si-main"><div class="si-name">${esc(s.name||payload.name||'Untitled')}</div>
+        <div class="si-meta">${esc(s.college||payload.college||'—')} · ${nB} batch${nB!==1?'es':''} · ${nP} program${nP!==1?'s':''} · ${(s.ptype||payload.ptype)==='bootcamp'?'Bootcamp':'Semester'}<br><span class="si-when">Generated ${when}</span></div></div>
       <div class="si-actions"><button class="btn btn-primary btn-sm" data-gload="${s.id}">Open</button><button class="si-del" data-gdel="${s.id}" title="Delete">🗑</button></div>`;
     host.appendChild(row);
   });
-  host.querySelectorAll('[data-gload]').forEach(b=>b.onclick=()=>{
-    const s=loadGenerated().find(x=>x.id===b.dataset.gload); if(s){applySnapshot(s);closeGenDrawer();}
+  host.querySelectorAll('[data-gload]').forEach(b=>b.onclick=async()=>{
+    const all = await loadGenerated();
+    const row = all.find(x=>x.id===b.dataset.gload);
+    if(row){ applySnapshot(row.payload||row); closeGenDrawer(); }
   });
-  host.querySelectorAll('[data-gdel]').forEach(b=>b.onclick=()=>{
+  host.querySelectorAll('[data-gdel]').forEach(b=>b.onclick=async()=>{
     if(!confirm('Remove this from previously generated?'))return;
-    writeGenerated(loadGenerated().filter(x=>x.id!==b.dataset.gdel)); renderGenList(); refreshChoiceCount();
+    await deleteGenerated(b.dataset.gdel);
+    await renderGenList();
+    await refreshChoiceCount();
   });
 }
-function openGenDrawer(){renderGenList();$('#genDrawer').classList.add('show');}
+async function openGenDrawer(){await renderGenList();$('#genDrawer').classList.add('show');}
 function closeGenDrawer(){$('#genDrawer').classList.remove('show');}
 $('#genClose').onclick=closeGenDrawer;
 $('#genDrawer').onclick=e=>{if(e.target.id==='genDrawer')closeGenDrawer();};
 
-refreshSaveCount();
+refreshSaveCount();  // async — updates save badge in background
 
 /* init: start with one batch to guide the user */
 batches.push(newBatch(0));
