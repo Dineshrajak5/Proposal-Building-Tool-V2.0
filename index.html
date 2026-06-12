@@ -2207,12 +2207,22 @@ async function loadSaved(){
   try{ _savedCache = await sbGet('proposals'); return _savedCache; }
   catch(e){ console.error(e); return []; }
 }
+// Postgres timestamptz needs an ISO string, not a raw epoch-ms number.
+function toISO(v){
+  try{
+    if(v==null) return new Date().toISOString();
+    if(typeof v==='number') return new Date(v).toISOString();
+    if(typeof v==='string'){ const d=new Date(v); return isNaN(d.getTime())? new Date().toISOString() : d.toISOString(); }
+    if(v instanceof Date) return v.toISOString();
+    return new Date().toISOString();
+  }catch(e){ return new Date().toISOString(); }
+}
 async function writeSaved(snap){
   try{
     const row = { id:snap.id, name:snap.name, college:snap.college||'',
                   institution_id:snap.institutionId||'', ptype:snap.ptype||'semester',
                   total_value:snap.totalValue||0, status:snap.status||'draft',
-                  saved_at:snap.savedAt, created_by:(FP_EMAIL||snap.createdBy||''),
+                  saved_at:toISO(snap.savedAt), created_by:(FP_EMAIL||snap.createdBy||''),
                   owner_name:(FP_NAME||''), payload:snap };
     await sbUpsert('proposals', row);
     _savedCache = null; // invalidate cache
@@ -2232,7 +2242,7 @@ async function writeGenerated(snap){
     const row = { id:snap.id, name:snap.name, college:snap.college||'',
                   institution_id:snap.institutionId||'', ptype:snap.ptype||'semester',
                   total_value:snap.totalValue||0,
-                  saved_at:snap.savedAt||snap.generatedAt, generated_at:snap.generatedAt||Date.now(),
+                  saved_at:toISO(snap.savedAt||snap.generatedAt), generated_at:toISO(snap.generatedAt||Date.now()),
                   created_by:(FP_EMAIL||snap.createdBy||''), owner_name:(FP_NAME||''), payload:snap };
     await sbUpsert('generated_proposals', row);
     _genCache = null;
